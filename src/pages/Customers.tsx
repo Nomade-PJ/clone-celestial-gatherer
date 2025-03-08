@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   SearchIcon, 
   PlusIcon, 
@@ -66,13 +67,17 @@ const customers = [
 
 const Customers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const navigate = useNavigate();
   
   const filteredCustomers = customers.filter(customer => 
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm)
   );
+  
+  const handleCustomerClick = (id: string) => {
+    navigate(`/customers/${id}`);
+  };
   
   return (
     <MainLayout>
@@ -87,7 +92,7 @@ const Customers: React.FC = () => {
             <h1 className="text-2xl font-bold">Clientes</h1>
             <p className="text-muted-foreground">Gerencie os clientes da sua loja</p>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => navigate('/customers/new')}>
             <PlusIcon size={16} />
             <span>Novo Cliente</span>
           </Button>
@@ -122,7 +127,9 @@ const Customers: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCustomers.length > 0 ? (
             filteredCustomers.map((customer, idx) => (
-              <CustomerCard key={customer.id} customer={customer} index={idx} />
+              <div key={customer.id} onClick={() => handleCustomerClick(customer.id)} className="cursor-pointer">
+                <CustomerCard customer={customer} index={idx} />
+              </div>
             ))
           ) : (
             <div className="col-span-full flex items-center justify-center h-60 bg-muted/50 rounded-lg">

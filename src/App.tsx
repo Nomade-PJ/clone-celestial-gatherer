@@ -10,6 +10,9 @@ import Devices from "./pages/Devices";
 import Services from "./pages/Services";
 import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
+import CustomerDetail from "./pages/CustomerDetail";
+import NewCustomer from "./pages/NewCustomer";
+import EditCustomer from "./pages/EditCustomer";
 
 // Add framer-motion for animations
 import { AnimatePresence } from "framer-motion";
@@ -27,6 +30,9 @@ const App = () => (
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/new" element={<NewCustomer />} />
+            <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/customers/edit/:id" element={<EditCustomer />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/services" element={<Services />} />
             <Route path="/inventory" element={<Inventory />} />
