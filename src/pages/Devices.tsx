@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -15,80 +15,35 @@ import {
 import MainLayout from '@/components/layout/MainLayout';
 import DeviceCard from '@/components/ui/DeviceCard';
 import { Button } from '@/components/ui/button';
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock data
-const devices = [
-  {
-    id: '1',
-    brand: 'Apple',
-    model: 'iPhone 13 Pro',
-    serialNumber: 'IMEI: 123456789012345',
-    type: 'ios',
-    status: 'good',
-    lastService: '22/10/2023',
-    owner: 'João Silva'
-  },
-  {
-    id: '2',
-    brand: 'Samsung',
-    model: 'Galaxy S22',
-    serialNumber: 'IMEI: 987654321098765',
-    type: 'android',
-    status: 'issue',
-    lastService: '18/10/2023',
-    owner: 'Maria Santos'
-  },
-  {
-    id: '3',
-    brand: 'Apple',
-    model: 'iPhone 12',
-    serialNumber: 'IMEI: 567890123456789',
-    type: 'ios',
-    status: 'good',
-    lastService: '15/10/2023',
-    owner: 'Pedro Almeida'
-  },
-  {
-    id: '4',
-    brand: 'Xiaomi',
-    model: 'Redmi Note 11',
-    serialNumber: 'IMEI: 345678901234567',
-    type: 'android',
-    status: 'critical',
-    lastService: '10/10/2023',
-    owner: 'Ana Ferreira'
-  },
-  {
-    id: '5',
-    brand: 'Apple',
-    model: 'iPhone 14',
-    serialNumber: 'IMEI: 789012345678901',
-    type: 'ios',
-    status: 'good',
-    lastService: '08/10/2023',
-    owner: 'Carlos Oliveira'
-  },
-  {
-    id: '6',
-    brand: 'Motorola',
-    model: 'Moto G32',
-    serialNumber: 'IMEI: 456789012345678',
-    type: 'android',
-    status: 'issue',
-    lastService: '05/10/2023',
-    owner: 'Mariana Costa'
-  }
-] as const;
+// Empty initial data - ready for new entries
+const initialDevices: any[] = [];
 
 const Devices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [devices, setDevices] = useState(initialDevices);
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Load devices from localStorage on component mount
+  useEffect(() => {
+    const savedDevices = localStorage.getItem('pauloCell_devices');
+    if (savedDevices) {
+      setDevices(JSON.parse(savedDevices));
+    }
+  }, []);
+
+  // Save devices to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pauloCell_devices', JSON.stringify(devices));
+  }, [devices]);
   
   const filteredDevices = devices.filter(device => 
-    device.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    device.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    device.owner.toLowerCase().includes(searchTerm.toLowerCase())
+    device.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    device.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    device.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    device.owner?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const handleDeviceClick = (id: string) => {
@@ -178,8 +133,9 @@ const Devices: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="col-span-full flex items-center justify-center h-60 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Nenhum dispositivo encontrado</p>
+            <div className="col-span-full flex flex-col items-center justify-center h-60 bg-muted/50 rounded-lg">
+              <p className="text-muted-foreground mb-4">Nenhum dispositivo cadastrado</p>
+              <Button onClick={() => navigate('/devices/new')}>Cadastrar Novo Dispositivo</Button>
             </div>
           )}
         </div>

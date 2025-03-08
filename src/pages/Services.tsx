@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -15,85 +15,34 @@ import {
 import MainLayout from '@/components/layout/MainLayout';
 import ServiceCard from '@/components/ui/ServiceCard';
 import { Button } from '@/components/ui/button';
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock data
-const services = [
-  {
-    id: '1',
-    type: 'Troca de Tela',
-    status: 'in_progress',
-    customer: 'João Silva',
-    device: 'iPhone 13 Pro',
-    createDate: '22/10/2023',
-    estimatedCompletion: '24/10/2023',
-    price: 450,
-    technician: 'Carlos Oliveira'
-  },
-  {
-    id: '2',
-    type: 'Substituição de Bateria',
-    status: 'waiting',
-    customer: 'Maria Santos',
-    device: 'Samsung Galaxy S22',
-    createDate: '21/10/2023',
-    estimatedCompletion: '23/10/2023',
-    price: 180,
-    technician: undefined
-  },
-  {
-    id: '3',
-    type: 'Reparo de Placa',
-    status: 'completed',
-    customer: 'Pedro Almeida',
-    device: 'iPhone 12',
-    createDate: '20/10/2023',
-    estimatedCompletion: '22/10/2023',
-    price: 320,
-    technician: 'Ana Ferreira'
-  },
-  {
-    id: '4',
-    type: 'Troca de Conector de Carga',
-    status: 'waiting',
-    customer: 'Ana Ferreira',
-    device: 'Xiaomi Redmi Note 11',
-    createDate: '19/10/2023',
-    estimatedCompletion: '21/10/2023',
-    price: 150,
-    technician: undefined
-  },
-  {
-    id: '5',
-    type: 'Atualização de Software',
-    status: 'delivered',
-    customer: 'Carlos Oliveira',
-    device: 'iPhone 14',
-    createDate: '18/10/2023',
-    estimatedCompletion: '18/10/2023',
-    price: 80,
-    technician: 'Pedro Almeida'
-  },
-  {
-    id: '6',
-    type: 'Limpeza Interna',
-    status: 'completed',
-    customer: 'Mariana Costa',
-    device: 'Motorola Moto G32',
-    createDate: '17/10/2023',
-    estimatedCompletion: '18/10/2023',
-    price: 120,
-    technician: 'João Silva'
-  }
-] as const;
+// Empty initial data - ready for new entries
+const initialServices: any[] = [];
 
 const Services: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [services, setServices] = useState(initialServices);
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Load services from localStorage on component mount
+  useEffect(() => {
+    const savedServices = localStorage.getItem('pauloCell_services');
+    if (savedServices) {
+      setServices(JSON.parse(savedServices));
+    }
+  }, []);
+
+  // Save services to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pauloCell_services', JSON.stringify(services));
+  }, [services]);
   
   const filteredServices = services.filter(service => 
-    service.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.device.toLowerCase().includes(searchTerm.toLowerCase())
+    service.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.device?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const handleServiceClick = (id: string) => {
@@ -185,8 +134,9 @@ const Services: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="col-span-full flex items-center justify-center h-60 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Nenhum serviço encontrado</p>
+            <div className="col-span-full flex flex-col items-center justify-center h-60 bg-muted/50 rounded-lg">
+              <p className="text-muted-foreground mb-4">Nenhum serviço cadastrado</p>
+              <Button onClick={() => navigate('/services/new')}>Cadastrar Novo Serviço</Button>
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -12,67 +12,34 @@ import {
 import MainLayout from '@/components/layout/MainLayout';
 import CustomerCard from '@/components/ui/CustomerCard';
 import { Button } from '@/components/ui/button';
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock data
-const customers = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao.silva@email.com',
-    phone: '(11) 98765-4321',
-    lastVisit: '22/10/2023',
-    totalServices: 3
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria.santos@email.com',
-    phone: '(11) 91234-5678',
-    lastVisit: '21/10/2023',
-    totalServices: 1
-  },
-  {
-    id: '3',
-    name: 'Pedro Almeida',
-    email: 'pedro.almeida@email.com',
-    phone: '(11) 99876-5432',
-    lastVisit: '18/10/2023',
-    totalServices: 5
-  },
-  {
-    id: '4',
-    name: 'Ana Ferreira',
-    email: 'ana.ferreira@email.com',
-    phone: '(11) 97654-3210',
-    lastVisit: '15/10/2023',
-    totalServices: 2
-  },
-  {
-    id: '5',
-    name: 'Carlos Oliveira',
-    email: 'carlos.oliveira@email.com',
-    phone: '(11) 98877-6655',
-    lastVisit: '10/10/2023',
-    totalServices: 4
-  },
-  {
-    id: '6',
-    name: 'Mariana Costa',
-    email: 'mariana.costa@email.com',
-    phone: '(11) 96655-4433',
-    lastVisit: '05/10/2023',
-    totalServices: 2
-  }
-] as const;
+// Empty initial data - ready for new entries
+const initialCustomers: any[] = [];
 
 const Customers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [customers, setCustomers] = useState(initialCustomers);
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Load customers from localStorage on component mount
+  useEffect(() => {
+    const savedCustomers = localStorage.getItem('pauloCell_customers');
+    if (savedCustomers) {
+      setCustomers(JSON.parse(savedCustomers));
+    }
+  }, []);
+
+  // Save customers to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pauloCell_customers', JSON.stringify(customers));
+  }, [customers]);
   
   const filteredCustomers = customers.filter(customer => 
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
+    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.phone?.includes(searchTerm)
   );
   
   const handleCustomerClick = (id: string) => {
@@ -132,8 +99,9 @@ const Customers: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="col-span-full flex items-center justify-center h-60 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+            <div className="col-span-full flex flex-col items-center justify-center h-60 bg-muted/50 rounded-lg">
+              <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado</p>
+              <Button onClick={() => navigate('/customers/new')}>Cadastrar Novo Cliente</Button>
             </div>
           )}
         </div>
