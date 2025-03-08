@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   SearchIcon, 
   PlusIcon, 
@@ -81,6 +82,7 @@ const devices = [
 
 const Devices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
   
   const filteredDevices = devices.filter(device => 
     device.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,6 +90,10 @@ const Devices: React.FC = () => {
     device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     device.owner.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const handleDeviceClick = (id: string) => {
+    navigate(`/devices/${id}`);
+  };
   
   return (
     <MainLayout>
@@ -102,7 +108,7 @@ const Devices: React.FC = () => {
             <h1 className="text-2xl font-bold">Dispositivos</h1>
             <p className="text-muted-foreground">Gerencie os dispositivos dos seus clientes</p>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => navigate('/devices/new')}>
             <PlusIcon size={16} />
             <span>Novo Dispositivo</span>
           </Button>
@@ -167,7 +173,9 @@ const Devices: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDevices.length > 0 ? (
             filteredDevices.map((device, idx) => (
-              <DeviceCard key={device.id} device={device} index={idx} />
+              <div key={device.id} onClick={() => handleDeviceClick(device.id)} className="cursor-pointer">
+                <DeviceCard device={device} index={idx} />
+              </div>
             ))
           ) : (
             <div className="col-span-full flex items-center justify-center h-60 bg-muted/50 rounded-lg">

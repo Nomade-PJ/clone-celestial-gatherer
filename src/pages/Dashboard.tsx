@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   WrenchIcon, 
   UsersIcon, 
@@ -94,10 +95,20 @@ const lowStockItems = [
 ] as const;
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Simulate data loading
   useEffect(() => {
     console.log('Dashboard loaded');
   }, []);
+  
+  const handleServiceClick = (id: string) => {
+    navigate(`/services/${id}`);
+  };
+  
+  const handleCustomerClick = (id: string) => {
+    navigate(`/customers/${id}`);
+  };
   
   return (
     <MainLayout>
@@ -112,45 +123,76 @@ const Dashboard: React.FC = () => {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Visão geral do seu negócio</p>
           </div>
-          <Button>Ver relatórios completos</Button>
+          <Button onClick={() => navigate('/reports')}>Ver relatórios completos</Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            title="Serviços Ativos"
-            value="24"
-            description="vs. mês anterior"
-            trend={{ value: 12, positive: true }}
-            icon={<WrenchIcon size={20} />}
-          />
-          <StatCard 
-            title="Clientes"
-            value="152"
-            description="5 novos este mês"
-            trend={{ value: 8, positive: true }}
-            icon={<UsersIcon size={20} />}
-          />
-          <StatCard 
-            title="Dispositivos"
-            value="201"
-            description="vs. mês anterior"
-            trend={{ value: 4, positive: true }}
-            icon={<SmartphoneIcon size={20} />}
-          />
-          <StatCard 
-            title="Faturamento"
-            value="R$ 12.450"
-            description="vs. mês anterior"
-            trend={{ value: 2, positive: false }}
-            icon={<TrendingUpIcon size={20} />}
-          />
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/services')}
+            className="cursor-pointer"
+          >
+            <StatCard 
+              title="Serviços Ativos"
+              value="24"
+              description="vs. mês anterior"
+              trend={{ value: 12, positive: true }}
+              icon={<WrenchIcon size={20} />}
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/customers')}
+            className="cursor-pointer"
+          >
+            <StatCard 
+              title="Clientes"
+              value="152"
+              description="5 novos este mês"
+              trend={{ value: 8, positive: true }}
+              icon={<UsersIcon size={20} />}
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/devices')}
+            className="cursor-pointer"
+          >
+            <StatCard 
+              title="Dispositivos"
+              value="201"
+              description="vs. mês anterior"
+              trend={{ value: 4, positive: true }}
+              icon={<SmartphoneIcon size={20} />}
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/reports')}
+            className="cursor-pointer"
+          >
+            <StatCard 
+              title="Faturamento"
+              value="R$ 12.450"
+              description="vs. mês anterior"
+              trend={{ value: 2, positive: false }}
+              icon={<TrendingUpIcon size={20} />}
+            />
+          </motion.div>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Serviços Recentes</h2>
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button variant="outline" size="sm" className="gap-1" onClick={() => navigate('/services')}>
                 <span>Ver todos</span>
                 <ArrowRightIcon size={16} />
               </Button>
@@ -158,7 +200,9 @@ const Dashboard: React.FC = () => {
             
             <div className="space-y-3">
               {recentServices.map((service, idx) => (
-                <ServiceCard key={service.id} service={service} index={idx} />
+                <div key={service.id} onClick={() => handleServiceClick(service.id)} className="cursor-pointer">
+                  <ServiceCard service={service} index={idx} />
+                </div>
               ))}
             </div>
           </div>
@@ -167,7 +211,7 @@ const Dashboard: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Clientes Recentes</h2>
-                <Button variant="outline" size="sm" className="gap-1">
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => navigate('/customers')}>
                   <span>Ver todos</span>
                   <ArrowRightIcon size={16} />
                 </Button>
@@ -175,7 +219,9 @@ const Dashboard: React.FC = () => {
               
               <div className="space-y-3">
                 {recentCustomers.map((customer, idx) => (
-                  <CustomerCard key={customer.id} customer={customer} index={idx} />
+                  <div key={customer.id} onClick={() => handleCustomerClick(customer.id)} className="cursor-pointer">
+                    <CustomerCard customer={customer} index={idx} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -183,7 +229,7 @@ const Dashboard: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Estoque Baixo</h2>
-                <Button variant="outline" size="sm" className="gap-1">
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => navigate('/inventory')}>
                   <span>Ver estoque</span>
                   <ArrowRightIcon size={16} />
                 </Button>

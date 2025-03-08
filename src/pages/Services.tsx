@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   SearchIcon, 
   PlusIcon, 
@@ -87,12 +88,17 @@ const services = [
 
 const Services: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
   
   const filteredServices = services.filter(service => 
     service.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.device.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const handleServiceClick = (id: string) => {
+    navigate(`/services/${id}`);
+  };
   
   return (
     <MainLayout>
@@ -107,7 +113,7 @@ const Services: React.FC = () => {
             <h1 className="text-2xl font-bold">Serviços</h1>
             <p className="text-muted-foreground">Gerencie os serviços da sua assistência</p>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => navigate('/services/new')}>
             <PlusIcon size={16} />
             <span>Novo Serviço</span>
           </Button>
@@ -174,7 +180,9 @@ const Services: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredServices.length > 0 ? (
             filteredServices.map((service, idx) => (
-              <ServiceCard key={service.id} service={service} index={idx} />
+              <div key={service.id} onClick={() => handleServiceClick(service.id)} className="cursor-pointer">
+                <ServiceCard key={service.id} service={service} index={idx} />
+              </div>
             ))
           ) : (
             <div className="col-span-full flex items-center justify-center h-60 bg-muted/50 rounded-lg">
