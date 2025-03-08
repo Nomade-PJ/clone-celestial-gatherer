@@ -9,6 +9,8 @@ import Customers from "./pages/Customers";
 import Devices from "./pages/Devices";
 import Services from "./pages/Services";
 import Inventory from "./pages/Inventory";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CustomerDetail from "./pages/CustomerDetail";
 import NewCustomer from "./pages/NewCustomer";
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/devices" element={<Devices />} />
             <Route path="/services" element={<Services />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
