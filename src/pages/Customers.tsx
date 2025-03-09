@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -8,16 +9,12 @@ import {
   ChevronDownIcon,
   DownloadIcon,
   XIcon,
-  CalendarIcon,
-  UserIcon,
-  PhoneIcon,
-  MailIcon,
-  RefreshCcwIcon
+  RefreshCcwIcon,
+  UserIcon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import CustomerCard from '@/components/ui/CustomerCard';
 import { Button } from '@/components/ui/button';
-import { useToast } from "@/components/ui/use-toast";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +30,6 @@ const Customers: React.FC = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
-  const { toast: uiToast } = useToast();
   
   // Load customers from localStorage on component mount
   useEffect(() => {
@@ -41,9 +37,18 @@ const Customers: React.FC = () => {
   }, []);
 
   const loadCustomers = () => {
-    const savedCustomers = localStorage.getItem('pauloCell_customers');
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
+    try {
+      const savedCustomers = localStorage.getItem('pauloCell_customers');
+      if (savedCustomers) {
+        const parsedCustomers = JSON.parse(savedCustomers);
+        setCustomers(parsedCustomers);
+      } else {
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      toast.error('Erro ao carregar clientes');
+      setCustomers([]);
     }
   };
   

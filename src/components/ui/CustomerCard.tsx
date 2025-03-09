@@ -7,16 +7,26 @@ interface CustomerCardProps {
   customer: {
     id: string;
     name: string;
-    email: string;
-    phone: string;
-    lastVisit: string;
-    totalServices: number;
+    email?: string;
+    phone?: string;
+    createdAt?: string;
     avatar?: string;
   };
   index: number;
 }
 
 const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) => {
+  // Format date for display
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR');
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
   return (
     <motion.div 
       className="bg-card rounded-xl border border-border p-4 card-hover"
@@ -30,21 +40,25 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) => {
             {customer.avatar ? (
               <img src={customer.avatar} alt={customer.name} className="w-10 h-10 rounded-full object-cover" />
             ) : (
-              customer.name.slice(0, 2).toUpperCase()
+              customer.name?.slice(0, 2).toUpperCase() || 'CL'
             )}
           </div>
           
           <div>
-            <h3 className="font-medium">{customer.name}</h3>
+            <h3 className="font-medium">{customer.name || 'Cliente'}</h3>
             <div className="flex flex-col gap-1 mt-1">
-              <div className="flex items-center text-sm text-muted-foreground">
-                <PhoneIcon size={14} className="mr-1.5" />
-                {customer.phone}
-              </div>
-              <div className="flex items-center text-sm text-muted-foreground">
-                <MailIcon size={14} className="mr-1.5" />
-                {customer.email}
-              </div>
+              {customer.phone && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <PhoneIcon size={14} className="mr-1.5" />
+                  {customer.phone}
+                </div>
+              )}
+              {customer.email && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <MailIcon size={14} className="mr-1.5" />
+                  {customer.email}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -56,10 +70,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) => {
       
       <div className="flex gap-3 mt-3 text-xs">
         <div className="px-2.5 py-1 rounded-full bg-muted">
-          Última visita: <span className="font-medium">{customer.lastVisit}</span>
-        </div>
-        <div className="px-2.5 py-1 rounded-full bg-muted">
-          Serviços: <span className="font-medium">{customer.totalServices}</span>
+          Cadastro: <span className="font-medium">{formatDate(customer.createdAt)}</span>
         </div>
       </div>
     </motion.div>
