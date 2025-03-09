@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { ArrowLeftIcon, PenIcon, TrashIcon, ClockIcon, ActivityIcon, CheckCircle
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 // Mock data
 const services = [
@@ -87,9 +88,57 @@ const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [service, setService] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
-  // Find the service with the matching ID
-  const service = services.find(s => s.id === id);
+  // Load service data from localStorage
+  useEffect(() => {
+    const loadServiceData = () => {
+      try {
+        setLoading(true);
+        
+        const savedServices = localStorage.getItem('pauloCell_services');
+        if (savedServices) {
+          const services = JSON.parse(savedServices);
+          const foundService = services.find((s: any) => s.id === id);
+          
+          if (foundService) {
+            setService(foundService);
+          } else {
+            toast({
+              title: "Serviço não encontrado",
+              description: "O serviço que você está procurando não existe ou foi removido.",
+            });
+          }
+        } else {
+          toast({
+            title: "Nenhum serviço cadastrado",
+            description: "Não há serviços cadastrados no sistema.",
+          });
+        }
+      } catch (error) {
+        console.error('Error loading service data:', error);
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Ocorreu um erro ao carregar os dados do serviço.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadServiceData();
+  }, [id, toast]);
+  
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-[70vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
   
   if (!service) {
     return (
@@ -103,22 +152,59 @@ const ServiceDetail: React.FC = () => {
   }
   
   const handleDelete = () => {
-    toast({
-      title: "Serviço excluído",
-      description: `${service.type} para ${service.customer} foi removido com sucesso.`,
-    });
-    navigate('/services');
+    try {
+      const savedServices = localStorage.getItem('pauloCell_services');
+      if (savedServices) {
+        const services = JSON.parse(savedServices);
+        const updatedServices = services.filter((s: any) => s.id !== id);
+        localStorage.setItem('pauloCell_services', JSON.stringify(updatedServices));
+        
+        toast({
+          title: "Serviço excluído",
+          description: `${service.type} para ${service.customer} foi removido com sucesso.`,
+        });
+        navigate('/services');
+      }
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir o serviço.",
+      });
+    }
   };
   
   const handleStatusChange = (newStatus: string) => {
-    toast({
-      title: "Status atualizado",
-      description: `O status do serviço foi alterado para ${
-        newStatus === 'waiting' ? 'Em espera' : 
-        newStatus === 'in_progress' ? 'Em andamento' : 
-        newStatus === 'completed' ? 'Concluído' : 'Entregue'
-      }.`,
-    });
+    try {
+      const savedServices = localStorage.getItem('pauloCell_services');
+      if (savedServices) {
+        const services = JSON.parse(savedServices);
+        const updatedServices = services.map((s: any) => {
+          if (s.id === id) {
+            return { ...s, status: newStatus };
+          }
+          return s;
+        });
+        
+        localStorage.setItem('pauloCell_services', JSON.stringify(updatedServices));
+        setService({ ...service, status: newStatus });
+        
+        toast({
+          title: "Status atualizado",
+          description: `O status do serviço foi alterado para ${
+            newStatus === 'waiting' ? 'Em espera' : 
+            newStatus === 'in_progress' ? 'Em andamento' : 
+            newStatus === 'completed' ? 'Concluído' : 'Entregue'
+          }.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating service status:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Ocorreu um erro ao atualizar o status do serviço.",
+      });
+    }
   };
   
   const getStatusBadge = (status: string) => {
@@ -137,7 +223,7 @@ const ServiceDetail: React.FC = () => {
   };
   
   const calculateTotalParts = () => {
-    return service.parts.reduce((total, part) => total + part.price, 0);
+    return service.parts ? service.parts.reduce((total: number, part: any) => total + (part.price || 0), 0) : 0;
   };
   
   return (
@@ -226,41 +312,43 @@ const ServiceDetail: React.FC = () => {
               <p>{service.notes}</p>
             </div>
             
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Peças Utilizadas</h3>
-              <div className="bg-muted/30 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase py-3 px-4">Peça</th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase py-3 px-4">Quantidade</th>
-                      <th className="text-right text-xs font-medium text-muted-foreground uppercase py-3 px-4">Preço</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {service.parts.map((part, idx) => (
-                      <tr key={part.id} className={idx < service.parts.length - 1 ? "border-b" : ""}>
-                        <td className="py-3 px-4">{part.name}</td>
-                        <td className="py-3 px-4 text-center">{part.quantity}</td>
-                        <td className="py-3 px-4 text-right">R$ {part.price.toFixed(2)}</td>
+            {service.parts && service.parts.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Peças Utilizadas</h3>
+                <div className="bg-muted/30 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase py-3 px-4">Peça</th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase py-3 px-4">Quantidade</th>
+                        <th className="text-right text-xs font-medium text-muted-foreground uppercase py-3 px-4">Preço</th>
                       </tr>
-                    ))}
-                    <tr className="border-t border-t-2">
-                      <td colSpan={2} className="py-3 px-4 font-medium text-right">Total de Peças:</td>
-                      <td className="py-3 px-4 text-right font-bold">R$ {calculateTotalParts().toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={2} className="py-3 px-4 font-medium text-right">Mão de Obra:</td>
-                      <td className="py-3 px-4 text-right font-bold">R$ {(service.price - calculateTotalParts()).toFixed(2)}</td>
-                    </tr>
-                    <tr className="bg-muted/60">
-                      <td colSpan={2} className="py-3 px-4 font-bold text-right">Valor Total:</td>
-                      <td className="py-3 px-4 text-right font-bold text-primary">R$ {service.price.toFixed(2)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {service.parts.map((part: any, idx: number) => (
+                        <tr key={part.id || idx} className={idx < service.parts.length - 1 ? "border-b" : ""}>
+                          <td className="py-3 px-4">{part.name}</td>
+                          <td className="py-3 px-4 text-center">{part.quantity}</td>
+                          <td className="py-3 px-4 text-right">R$ {part.price?.toFixed(2) || '0.00'}</td>
+                        </tr>
+                      ))}
+                      <tr className="border-t border-t-2">
+                        <td colSpan={2} className="py-3 px-4 font-medium text-right">Total de Peças:</td>
+                        <td className="py-3 px-4 text-right font-bold">R$ {calculateTotalParts().toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td colSpan={2} className="py-3 px-4 font-medium text-right">Mão de Obra:</td>
+                        <td className="py-3 px-4 text-right font-bold">R$ {((service.price || 0) - calculateTotalParts()).toFixed(2)}</td>
+                      </tr>
+                      <tr className="bg-muted/60">
+                        <td colSpan={2} className="py-3 px-4 font-bold text-right">Valor Total:</td>
+                        <td className="py-3 px-4 text-right font-bold text-primary">R$ {(service.price || 0).toFixed(2)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
             
             <div className="flex flex-wrap gap-2">
               <Button
@@ -301,9 +389,9 @@ const ServiceDetail: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Atualizações</h2>
             
-            {service.updates.length > 0 ? (
+            {service.updates && service.updates.length > 0 ? (
               <div className="space-y-4">
-                {service.updates.map((update, idx) => (
+                {service.updates.map((update: any, idx: number) => (
                   <motion.div 
                     key={idx}
                     initial={{ opacity: 0, y: 10 }}

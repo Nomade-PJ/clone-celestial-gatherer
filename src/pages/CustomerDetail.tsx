@@ -48,12 +48,11 @@ const CustomerDetail: React.FC = () => {
               const customerDevices = devices.filter((device: any) => device.owner === id);
               setCustomerDevices(customerDevices);
             }
-            
             // Load customer services
             const savedServices = localStorage.getItem('pauloCell_services');
             if (savedServices) {
               const services = JSON.parse(savedServices);
-              const customerServices = services.filter((service: any) => service.customer === id);
+              const customerServices = services.filter((service: any) => service.customerId === id);
               setServiceHistory(customerServices);
             } else {
               setServiceHistory([]);

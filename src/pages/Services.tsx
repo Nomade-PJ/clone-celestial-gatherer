@@ -17,7 +17,8 @@ import {
   TagIcon,
   UserIcon
 } from 'lucide-react';
-import MainLayout from '@/components/layout/MainLayout';
+// Re-import MainLayout with a different approach
+import MainLayout from '../components/layout/MainLayout';
 import ServiceCard from '@/components/ui/ServiceCard';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
+import { exportToPDF, exportToExcel, exportToCSV } from "@/lib/export-utils";
 
 // Empty initial data - ready for new entries
 const initialServices: any[] = [];
@@ -107,9 +109,31 @@ const Services: React.FC = () => {
   };
   
   const exportServices = (format: string) => {
-    // In a real app, this would generate the actual file
-    // For now, just show a toast
-    toast.success(`Serviços exportados em formato ${format.toUpperCase()}`);
+    try {
+      // Get the filtered services to export
+      const dataToExport = filteredServices;
+      
+      // Use the appropriate export function based on format
+      switch (format.toLowerCase()) {
+        case 'pdf':
+          exportToPDF(dataToExport, 'Serviços');
+          break;
+        case 'excel':
+          exportToExcel(dataToExport, 'Serviços');
+          break;
+        case 'csv':
+          exportToCSV(dataToExport, 'Serviços');
+          break;
+        default:
+          toast.error('Formato de exportação não suportado');
+          return;
+      }
+      
+      toast.success(`Serviços exportados em formato ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting services:', error);
+      toast.error('Erro ao exportar serviços');
+    }
   };
   
   const handleStatusFilterChange = (status: string) => {
@@ -136,16 +160,7 @@ const Services: React.FC = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative w-full sm:w-80">
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Buscar serviços..." 
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/50 focus:outline-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <div className="flex-1"></div> {/* Empty div to maintain layout structure */}
           
           <div className="flex gap-2 w-full sm:w-auto">
             <DropdownMenu>

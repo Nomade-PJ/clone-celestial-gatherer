@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { exportToPDF, exportToExcel, exportToCSV } from "@/lib/export-utils";
 import { 
   Dialog, 
   DialogContent, 
@@ -267,7 +268,31 @@ const Inventory: React.FC = () => {
   };
   
   const exportInventory = (format: string) => {
-    toast.success(`Estoque exportado em formato ${format.toUpperCase()}`);
+    try {
+      // Get the filtered inventory items to export
+      const dataToExport = filteredItems;
+      
+      // Use the appropriate export function based on format
+      switch (format.toLowerCase()) {
+        case 'pdf':
+          exportToPDF(dataToExport, 'Estoque');
+          break;
+        case 'excel':
+          exportToExcel(dataToExport, 'Estoque');
+          break;
+        case 'csv':
+          exportToCSV(dataToExport, 'Estoque');
+          break;
+        default:
+          toast.error('Formato de exportação não suportado');
+          return;
+      }
+      
+      toast.success(`Estoque exportado em formato ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting inventory:', error);
+      toast.error('Erro ao exportar estoque');
+    }
   };
   
   const handleStockFilterChange = (status: string) => {

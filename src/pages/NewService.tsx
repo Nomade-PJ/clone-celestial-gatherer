@@ -143,7 +143,9 @@ const NewService: React.FC = () => {
       createdAt: new Date().toISOString(),
       createDate: new Date().toLocaleDateString(), // Added for ServiceCard compatibility
       customer: customer?.name || 'Cliente não encontrado',
+      customerId: formData.customerId, // Explicitly add customerId for proper filtering
       device: device?.name || 'Dispositivo não encontrado',
+      deviceId: formData.deviceId, // Explicitly add deviceId for proper filtering
       technician: technician?.name || 'Não atribuído',
       estimatedCompletion: formData.estimatedCompletion || undefined,
     };

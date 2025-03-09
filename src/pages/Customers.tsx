@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { exportToPDF, exportToExcel, exportToCSV } from "@/lib/export-utils";
 
 const Customers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,9 +93,31 @@ const Customers: React.FC = () => {
   };
   
   const exportCustomers = (format: string) => {
-    // In a real app, this would generate the actual file
-    // For now, just show a toast
-    toast.success(`Clientes exportados em formato ${format.toUpperCase()}`);
+    try {
+      // Get the filtered customers to export
+      const dataToExport = filteredCustomers;
+      
+      // Use the appropriate export function based on format
+      switch (format.toLowerCase()) {
+        case 'pdf':
+          exportToPDF(dataToExport, 'Clientes');
+          break;
+        case 'excel':
+          exportToExcel(dataToExport, 'Clientes');
+          break;
+        case 'csv':
+          exportToCSV(dataToExport, 'Clientes');
+          break;
+        default:
+          toast.error('Formato de exportação não suportado');
+          return;
+      }
+      
+      toast.success(`Clientes exportados em formato ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting customers:', error);
+      toast.error('Erro ao exportar clientes');
+    }
   };
 
   const handleRefresh = () => {
@@ -128,16 +151,7 @@ const Customers: React.FC = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative w-full sm:w-80">
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Buscar clientes..." 
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/50 focus:outline-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <div className="flex-1">{/* Empty div to maintain layout structure */}</div>
           
           <div className="flex gap-2 w-full sm:w-auto">
             <DropdownMenu>

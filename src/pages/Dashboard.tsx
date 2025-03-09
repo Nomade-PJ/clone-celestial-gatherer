@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
   
   // Get low stock items (up to 3)
   const lowStockItems = inventory
-    .filter(item => item.currentStock < item.minimumStock)
+    .filter(item => Number(item.currentStock) < 5)
     .slice(0, 3);
   
   const handleServiceClick = (id: string) => {
