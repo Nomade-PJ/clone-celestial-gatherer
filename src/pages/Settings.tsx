@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
@@ -56,6 +56,20 @@ const Settings: React.FC = () => {
     smsNotifications: false,
   });
   
+  // Load saved settings on component mount
+  useEffect(() => {
+    const savedCompanyData = localStorage.getItem('pauloCell_companyData');
+    const savedNotificationSettings = localStorage.getItem('pauloCell_notificationSettings');
+
+    if (savedCompanyData) {
+      setCompanyData(JSON.parse(savedCompanyData));
+    }
+
+    if (savedNotificationSettings) {
+      setNotificationSettings(JSON.parse(savedNotificationSettings));
+    }
+  }, []);
+
   const handleCompanyDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCompanyData(prev => ({ ...prev, [name]: value }));
