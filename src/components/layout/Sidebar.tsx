@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +10,8 @@ import {
   BarChartIcon, 
   SettingsIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  FileTextIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar }) => {
     { path: '/customers', name: 'Clientes', icon: UsersIcon },
     { path: '/devices', name: 'Dispositivos', icon: SmartphoneIcon },
     { path: '/services', name: 'Serviços', icon: WrenchIcon },
+    { path: '/documents', name: 'Documentos', icon: FileTextIcon },
     { path: '/inventory', name: 'Estoque', icon: PackageIcon },
     { path: '/reports', name: 'Relatórios', icon: BarChartIcon },
     { path: '/settings', name: 'Configurações', icon: SettingsIcon },

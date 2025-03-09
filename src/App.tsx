@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,7 @@ import ServiceDetail from "./pages/ServiceDetail";
 import NewService from "./pages/NewService";
 import EditService from "./pages/EditService";
 import NotificationDemo from "./pages/NotificationDemo";
+import Documents from "./pages/Documents";
 
 // Add framer-motion for animations
 import { AnimatePresence } from "framer-motion";
@@ -63,6 +63,8 @@ const App = () => (
             <Route path="/services/new" element={<NewService />} />
             <Route path="/services/:id" element={<ServiceDetail />} />
             <Route path="/services/edit/:id" element={<EditService />} />
+            
+            <Route path="/documents" element={<Documents />} />
             
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/reports" element={<Reports />} />
