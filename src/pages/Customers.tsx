@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +11,8 @@ import {
   CalendarIcon,
   UserIcon,
   PhoneIcon,
-  MailIcon
+  MailIcon,
+  RefreshCcwIcon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import CustomerCard from '@/components/ui/CustomerCard';
@@ -28,28 +28,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-// Empty initial data - ready for new entries
-const initialCustomers: any[] = [];
-
 const Customers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [customers, setCustomers] = useState(initialCustomers);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
   
   // Load customers from localStorage on component mount
   useEffect(() => {
+    loadCustomers();
+  }, []);
+
+  const loadCustomers = () => {
     const savedCustomers = localStorage.getItem('pauloCell_customers');
     if (savedCustomers) {
       setCustomers(JSON.parse(savedCustomers));
     }
-  }, []);
-
-  // Save customers to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('pauloCell_customers', JSON.stringify(customers));
-  }, [customers]);
+  };
   
   const handleFilterToggle = (filter: string) => {
     setActiveFilters(prev => 
@@ -95,6 +91,11 @@ const Customers: React.FC = () => {
     // For now, just show a toast
     toast.success(`Clientes exportados em formato ${format.toUpperCase()}`);
   };
+
+  const handleRefresh = () => {
+    loadCustomers();
+    toast.success('Lista de clientes atualizada!');
+  };
   
   return (
     <MainLayout>
@@ -109,10 +110,16 @@ const Customers: React.FC = () => {
             <h1 className="text-2xl font-bold">Clientes</h1>
             <p className="text-muted-foreground">Gerencie os clientes da sua loja</p>
           </div>
-          <Button className="gap-2" onClick={() => navigate('/customers/new')}>
-            <PlusIcon size={16} />
-            <span>Novo Cliente</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleRefresh}>
+              <RefreshCcwIcon size={16} />
+              <span className="hidden sm:inline">Atualizar</span>
+            </Button>
+            <Button className="gap-2" onClick={() => navigate('/customers/new')}>
+              <PlusIcon size={16} />
+              <span>Novo Cliente</span>
+            </Button>
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">

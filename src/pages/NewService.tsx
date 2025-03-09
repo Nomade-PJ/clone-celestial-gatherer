@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 // Mock data para peças e acessórios disponíveis
 const availableParts = [
@@ -43,8 +44,40 @@ const NewService: React.FC = () => {
   const { toast } = useToast();
   const { customerId, deviceId } = location.state || {};
   
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [devices, setDevices] = useState<any[]>([]);
   const [selectedParts, setSelectedParts] = useState<SelectedPart[]>([]);
   const [laborCost, setLaborCost] = useState<number>(100);
+  const [formData, setFormData] = useState({
+    customerId: customerId || '',
+    deviceId: deviceId || '',
+    serviceType: '',
+    technicianId: '',
+    estimatedCompletion: '',
+    status: 'waiting',
+    notes: '',
+  });
+  
+  useEffect(() => {
+    const savedCustomers = localStorage.getItem('pauloCell_customers');
+    if (savedCustomers) {
+      setCustomers(JSON.parse(savedCustomers));
+    }
+    
+    const savedDevices = localStorage.getItem('pauloCell_devices');
+    if (savedDevices) {
+      setDevices(JSON.parse(savedDevices));
+    }
+  }, []);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+  
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({ ...formData, [name]: value });
+  };
   
   const addPart = (partId: string) => {
     const part = availableParts.find(p => p.id === partId);
@@ -85,10 +118,30 @@ const NewService: React.FC = () => {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const serviceData = {
+      id: uuidv4(),
+      ...formData,
+      parts: selectedParts,
+      laborCost,
+      totalCost: calculateTotal(),
+      createdAt: new Date().toISOString(),
+      customer: customers.find(c => c.id === formData.customerId)?.name || 'Cliente não encontrado',
+      device: devices.find(d => d.id === formData.deviceId)?.name || 'Dispositivo não encontrado',
+    };
+    
+    const savedServices = localStorage.getItem('pauloCell_services');
+    const services = savedServices ? JSON.parse(savedServices) : [];
+    
+    services.push(serviceData);
+    
+    localStorage.setItem('pauloCell_services', JSON.stringify(services));
+    
     toast({
       title: "Serviço adicionado",
       description: "O serviço foi registrado com sucesso.",
     });
+    
     navigate('/services');
   };
   
@@ -117,30 +170,28 @@ const NewService: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="customer">Cliente</Label>
-                <Select defaultValue={customerId || undefined}>
+                <Select defaultValue={formData.customerId || undefined}>
                   <SelectTrigger id="customer">
                     <SelectValue placeholder="Selecione o cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">João Silva</SelectItem>
-                    <SelectItem value="2">Maria Santos</SelectItem>
-                    <SelectItem value="3">Pedro Almeida</SelectItem>
-                    <SelectItem value="4">Ana Ferreira</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="device">Dispositivo</Label>
-                <Select defaultValue={deviceId || undefined}>
+                <Select defaultValue={formData.deviceId || undefined}>
                   <SelectTrigger id="device">
                     <SelectValue placeholder="Selecione o dispositivo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">iPhone 13 Pro - João Silva</SelectItem>
-                    <SelectItem value="2">Galaxy S22 - Maria Santos</SelectItem>
-                    <SelectItem value="3">iPhone 12 - Pedro Almeida</SelectItem>
-                    <SelectItem value="4">Redmi Note 11 - Ana Ferreira</SelectItem>
+                    {devices.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

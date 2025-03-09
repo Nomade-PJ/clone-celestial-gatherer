@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CustomerFormProps {
   onSubmit?: (customerData: any) => void;
@@ -21,6 +22,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
 }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    id: initialData.id || uuidv4(),
     name: initialData.name || '',
     email: initialData.email || '',
     phone: initialData.phone || '',
@@ -31,6 +33,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     cpfCnpj: initialData.cpfCnpj || '',
     notes: initialData.notes || '',
     isCompany: initialData.isCompany || false,
+    createdAt: initialData.createdAt || new Date().toISOString(),
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,9 +52,22 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Here you would normally send data to your backend
-      // For now we'll just simulate a successful submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Retrieve existing customers from localStorage
+      const savedCustomers = localStorage.getItem('pauloCell_customers');
+      let customers = savedCustomers ? JSON.parse(savedCustomers) : [];
+      
+      if (isEdit) {
+        // Update existing customer
+        customers = customers.map((customer: any) => 
+          customer.id === formData.id ? formData : customer
+        );
+      } else {
+        // Add new customer
+        customers.push(formData);
+      }
+      
+      // Save updated customers list to localStorage
+      localStorage.setItem('pauloCell_customers', JSON.stringify(customers));
       
       if (onSubmit) {
         onSubmit(formData);
