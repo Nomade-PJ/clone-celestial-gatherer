@@ -23,6 +23,8 @@ import NewService from "./pages/NewService";
 import EditService from "./pages/EditService";
 import NotificationDemo from "./pages/NotificationDemo";
 import Documents from "./pages/Documents";
+import NewDocument from "./pages/NewDocument";
+import DocumentDetail from "./pages/DocumentDetail";
 
 // Add framer-motion for animations
 import { AnimatePresence } from "framer-motion";
@@ -65,6 +67,8 @@ const App = () => (
             <Route path="/services/edit/:id" element={<EditService />} />
             
             <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/new" element={<NewDocument />} />
+            <Route path="/documents/:id" element={<DocumentDetail />} />
             
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/reports" element={<Reports />} />

@@ -18,17 +18,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { TrashIcon } from 'lucide-react';
 
 const documentFormSchema = z.object({
-  type: z.string(),
+  type: z.enum(['nfe', 'nfce', 'nfse']),
   customer: z.string().min(1, 'Cliente é obrigatório'),
   items: z.array(z.object({
     description: z.string().min(1, 'Descrição é obrigatória'),
     quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
     unitValue: z.number().min(0.01, 'Valor unitário deve ser maior que 0'),
+    ncm: z.string().optional(),
+    cfop: z.string().optional(),
   })).min(1, 'Adicione pelo menos um item'),
   paymentMethod: z.string().min(1, 'Método de pagamento é obrigatório'),
   observations: z.string().optional(),
+  // Campos específicos para NF-e
+  naturezaOperacao: z.string().optional(),
+  // Campos específicos para NFC-e
+  cpfCnpjConsumidor: z.string().optional(),
+  // Campos específicos para NFS-e
+  servicosPrestados: z.string().optional(),
+  aliquotaIss: z.number().optional(),
 });
 
 type DocumentFormData = z.infer<typeof documentFormSchema>;
@@ -37,9 +47,10 @@ interface DocumentFormProps {
   type: 'nfe' | 'nfce' | 'nfse';
   onSubmit: (data: DocumentFormData) => void;
   onCancel: () => void;
+  customerId?: string;
 }
 
-const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel }) => {
+const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, customerId }) => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,8 +58,14 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel })
     resolver: zodResolver(documentFormSchema),
     defaultValues: {
       type,
+      customer: customerId || '',
       items: [{ description: '', quantity: 1, unitValue: 0 }],
       observations: '',
+      paymentMethod: '',
+      naturezaOperacao: type === 'nfe' ? 'Venda de Mercadoria' : undefined,
+      cpfCnpjConsumidor: type === 'nfce' ? '' : undefined,
+      servicosPrestados: type === 'nfse' ? '' : undefined,
+      aliquotaIss: type === 'nfse' ? 5 : undefined,
     },
   });
 
@@ -77,6 +94,10 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel })
         items: data.items,
         paymentMethod: data.paymentMethod,
         observations: data.observations,
+        naturezaOperacao: data.naturezaOperacao,
+        cpfCnpjConsumidor: data.cpfCnpjConsumidor,
+        servicosPrestados: data.servicosPrestados,
+        aliquotaIss: data.aliquotaIss,
       };
 
       // Salvar no localStorage
@@ -92,6 +113,13 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel })
       console.error(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const removeItem = (index: number) => {
+    const items = form.watch('items');
+    if (items.length > 1) {
+      form.setValue('items', items.filter((_, i) => i !== index));
     }
   };
 
@@ -126,62 +154,181 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel })
                 )}
               />
 
-              {form.watch('items').map((_, index) => (
-                <div key={index} className="grid gap-4">
+              {type === 'nfe' && (
+                <FormField
+                  control={form.control}
+                  name="naturezaOperacao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Natureza da Operação</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {type === 'nfce' && (
+                <FormField
+                  control={form.control}
+                  name="cpfCnpjConsumidor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CPF/CNPJ do Consumidor</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {type === 'nfse' && (
+                <>
                   <FormField
                     control={form.control}
-                    name={`items.${index}.description`}
+                    name="servicosPrestados"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Descrição do Item {index + 1}</FormLabel>
+                        <FormLabel>Serviços Prestados</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Textarea {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="aliquotaIss"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Alíquota ISS (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.quantity`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantidade</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <div className="space-y-4">
+                {form.watch('items').map((_, index) => (
+                  <Card key={index}>
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium">Item {index + 1}</h3>
+                        {form.watch('items').length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeItem(index)}
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Descrição</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.unitValue`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor Unitário</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.quantity`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Quantidade</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.unitValue`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Valor Unitário</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    {...field}
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {type === 'nfe' && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.ncm`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>NCM</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              ))}
+
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.cfop`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>CFOP</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
               <Button
                 type="button"
@@ -208,9 +355,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel })
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                        <SelectItem value="cartao">Cartão</SelectItem>
+                        <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                        <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
                         <SelectItem value="pix">PIX</SelectItem>
                         <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="transferencia">Transferência Bancária</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
