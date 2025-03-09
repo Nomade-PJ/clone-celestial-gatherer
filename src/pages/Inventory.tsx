@@ -13,11 +13,12 @@ import {
   XIcon,
   TagIcon,
   BoxIcon,
-  RefreshCwIcon
+  RefreshCwIcon,
+  PenIcon,
+  TrashIcon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { 
   DropdownMenu,
@@ -29,25 +30,66 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-// Empty initial data - ready for new entries
-const initialInventoryItems: any[] = [];
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { v4 as uuidv4 } from 'uuid';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [inventoryItems, setInventoryItems] = useState(initialInventoryItems);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [stockFilter, setStockFilter] = useState<string>('all');
-  const { toast: uiToast } = useToast();
   const navigate = useNavigate();
+  
+  // Modal states
+  const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    id: '',
+    name: '',
+    sku: '',
+    category: '',
+    compatibility: '',
+    price: '',
+    currentStock: '',
+    minimumStock: '',
+    lastPurchase: new Date().toLocaleDateString('pt-BR')
+  });
   
   // Load inventory items from localStorage on component mount
   useEffect(() => {
+    loadInventoryItems();
+  }, []);
+
+  const loadInventoryItems = () => {
     const savedInventory = localStorage.getItem('pauloCell_inventory');
     if (savedInventory) {
       setInventoryItems(JSON.parse(savedInventory));
     }
-  }, []);
+  };
 
   // Save inventory items to localStorage whenever they change
   useEffect(() => {
@@ -79,11 +121,16 @@ const Inventory: React.FC = () => {
     
     // Then apply stock filter
     if (stockFilter === 'critical') {
-      filtered = filtered.filter(item => item.currentStock === 0);
+      filtered = filtered.filter(item => Number(item.currentStock) === 0);
     } else if (stockFilter === 'low') {
-      filtered = filtered.filter(item => item.currentStock > 0 && item.currentStock < item.minimumStock);
+      filtered = filtered.filter(item => 
+        Number(item.currentStock) > 0 && 
+        Number(item.currentStock) < Number(item.minimumStock)
+      );
     } else if (stockFilter === 'ok') {
-      filtered = filtered.filter(item => item.currentStock >= item.minimumStock);
+      filtered = filtered.filter(item => 
+        Number(item.currentStock) >= Number(item.minimumStock)
+      );
     }
     
     // Then apply any additional filters
@@ -104,27 +151,122 @@ const Inventory: React.FC = () => {
   
   const filteredItems = applyFilters(inventoryItems);
   
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
   const handleNewItem = () => {
-    // Mock item creation for demo
-    const newItem = {
-      id: `item_${Date.now()}`,
-      name: `Novo Item ${inventoryItems.length + 1}`,
-      sku: `SKU${Math.floor(1000 + Math.random() * 9000)}`,
-      category: ['Tela', 'Bateria', 'Acessório', 'Placa'][Math.floor(Math.random() * 4)],
-      compatibility: ['iPhone', 'Samsung', 'Xiaomi', 'Motorola'][Math.floor(Math.random() * 4)],
-      price: Math.floor(50 + Math.random() * 450),
-      currentStock: Math.floor(Math.random() * 15),
-      minimumStock: 5,
-      lastPurchase: `${Math.floor(1 + Math.random() * 30)}/10/2023`
-    };
+    // Reset form data
+    setFormData({
+      id: uuidv4(),
+      name: '',
+      sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+      category: '',
+      compatibility: '',
+      price: '',
+      currentStock: '',
+      minimumStock: '5',
+      lastPurchase: new Date().toLocaleDateString('pt-BR')
+    });
     
-    setInventoryItems(prev => [newItem, ...prev]);
-    toast.success('Novo item adicionado ao estoque');
+    // Open the dialog
+    setIsNewItemDialogOpen(true);
+  };
+  
+  const handleSaveNewItem = () => {
+    // Validate required fields
+    if (!formData.name || !formData.category || !formData.currentStock) {
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+    
+    try {
+      // Add the new item to inventory
+      const newItem = {
+        ...formData,
+        price: Number(formData.price),
+        currentStock: Number(formData.currentStock),
+        minimumStock: Number(formData.minimumStock)
+      };
+      
+      setInventoryItems(prev => [newItem, ...prev]);
+      
+      // Close the dialog and show success message
+      setIsNewItemDialogOpen(false);
+      toast.success('Item adicionado ao estoque com sucesso!');
+    } catch (error) {
+      console.error('Error adding inventory item:', error);
+      toast.error('Erro ao adicionar item ao estoque.');
+    }
+  };
+  
+  const handleEditItem = (item: any) => {
+    setSelectedItem(item);
+    setFormData({
+      id: item.id,
+      name: item.name || '',
+      sku: item.sku || '',
+      category: item.category || '',
+      compatibility: item.compatibility || '',
+      price: item.price?.toString() || '',
+      currentStock: item.currentStock?.toString() || '',
+      minimumStock: item.minimumStock?.toString() || '',
+      lastPurchase: item.lastPurchase || new Date().toLocaleDateString('pt-BR')
+    });
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleSaveEditItem = () => {
+    try {
+      // Update the item in the inventory
+      const updatedItems = inventoryItems.map(item => 
+        item.id === formData.id ? {
+          ...formData,
+          price: Number(formData.price),
+          currentStock: Number(formData.currentStock),
+          minimumStock: Number(formData.minimumStock)
+        } : item
+      );
+      
+      setInventoryItems(updatedItems);
+      
+      // Close the dialog and show success message
+      setIsEditDialogOpen(false);
+      toast.success('Item atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating inventory item:', error);
+      toast.error('Erro ao atualizar item do estoque.');
+    }
+  };
+  
+  const handleDeletePrompt = (item: any) => {
+    setSelectedItem(item);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleConfirmDelete = () => {
+    if (!selectedItem) return;
+    
+    try {
+      // Remove the item from inventory
+      const updatedItems = inventoryItems.filter(item => item.id !== selectedItem.id);
+      setInventoryItems(updatedItems);
+      
+      // Close the dialog and show success message
+      setIsDeleteDialogOpen(false);
+      toast.success('Item removido do estoque com sucesso!');
+    } catch (error) {
+      console.error('Error deleting inventory item:', error);
+      toast.error('Erro ao remover item do estoque.');
+    }
   };
   
   const exportInventory = (format: string) => {
-    // In a real app, this would generate the actual file
-    // For now, just show a toast
     toast.success(`Estoque exportado em formato ${format.toUpperCase()}`);
   };
   
@@ -244,7 +386,7 @@ const Inventory: React.FC = () => {
             <ShieldAlertIcon size={16} className="text-red-600" />
             <span>Estoque crítico</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-              {inventoryItems.filter(i => i.currentStock === 0).length}
+              {inventoryItems.filter(i => Number(i.currentStock) === 0).length}
             </span>
           </Button>
           <Button 
@@ -255,7 +397,10 @@ const Inventory: React.FC = () => {
             <AlertCircleIcon size={16} className="text-amber-500" />
             <span>Estoque baixo</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-              {inventoryItems.filter(i => i.currentStock > 0 && i.currentStock < i.minimumStock).length}
+              {inventoryItems.filter(i => 
+                Number(i.currentStock) > 0 && 
+                Number(i.currentStock) < Number(i.minimumStock)
+              ).length}
             </span>
           </Button>
           <Button 
@@ -266,7 +411,9 @@ const Inventory: React.FC = () => {
             <CheckIcon size={16} className="text-green-600" />
             <span>Estoque adequado</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-              {inventoryItems.filter(i => i.currentStock >= i.minimumStock).length}
+              {inventoryItems.filter(i => 
+                Number(i.currentStock) >= Number(i.minimumStock)
+              ).length}
             </span>
           </Button>
         </div>
@@ -309,6 +456,7 @@ const Inventory: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Preço</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estoque</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Última Compra</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-card">
@@ -337,11 +485,11 @@ const Inventory: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          {item.currentStock === 0 ? (
+                          {Number(item.currentStock) === 0 ? (
                             <div className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium">
                               Crítico
                             </div>
-                          ) : item.currentStock < item.minimumStock ? (
+                          ) : Number(item.currentStock) < Number(item.minimumStock) ? (
                             <div className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
                               Baixo
                             </div>
@@ -357,6 +505,26 @@ const Inventory: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {item.lastPurchase}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditItem(item)}
+                          >
+                            <PenIcon size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeletePrompt(item)}
+                          >
+                            <TrashIcon size={16} />
+                          </Button>
+                        </div>
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>
@@ -370,6 +538,263 @@ const Inventory: React.FC = () => {
           </div>
         )}
       </motion.div>
+      
+      {/* New Item Dialog */}
+      <Dialog open={isNewItemDialogOpen} onOpenChange={setIsNewItemDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Item de Estoque</DialogTitle>
+            <DialogDescription>
+              Preencha as informações do novo item para adicionar ao estoque
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome do Produto *</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Ex: Tela iPhone 11"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleInputChange}
+                  placeholder="Ex: TL-IPH11-001"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria *</Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => handleSelectChange('category', value)}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Tela">Tela</SelectItem>
+                    <SelectItem value="Bateria">Bateria</SelectItem>
+                    <SelectItem value="Acessório">Acessório</SelectItem>
+                    <SelectItem value="Placa">Placa</SelectItem>
+                    <SelectItem value="Cabo">Cabo</SelectItem>
+                    <SelectItem value="Carcaça">Carcaça</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="compatibility">Compatibilidade</Label>
+                <Input
+                  id="compatibility"
+                  name="compatibility"
+                  value={formData.compatibility}
+                  onChange={handleInputChange}
+                  placeholder="Ex: iPhone 11, 12"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">Preço (R$)</Label>
+                <Input
+                  id="price"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="currentStock">Estoque Atual *</Label>
+                <Input
+                  id="currentStock"
+                  name="currentStock"
+                  type="number"
+                  value={formData.currentStock}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="minimumStock">Estoque Mínimo</Label>
+                <Input
+                  id="minimumStock"
+                  name="minimumStock"
+                  type="number"
+                  value={formData.minimumStock}
+                  onChange={handleInputChange}
+                  placeholder="5"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewItemDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveNewItem}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Item de Estoque</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do item selecionado
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome do Produto *</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Ex: Tela iPhone 11"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleInputChange}
+                  placeholder="Ex: TL-IPH11-001"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria *</Label>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => handleSelectChange('category', value)}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Tela">Tela</SelectItem>
+                    <SelectItem value="Bateria">Bateria</SelectItem>
+                    <SelectItem value="Acessório">Acessório</SelectItem>
+                    <SelectItem value="Placa">Placa</SelectItem>
+                    <SelectItem value="Cabo">Cabo</SelectItem>
+                    <SelectItem value="Carcaça">Carcaça</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="compatibility">Compatibilidade</Label>
+                <Input
+                  id="compatibility"
+                  name="compatibility"
+                  value={formData.compatibility}
+                  onChange={handleInputChange}
+                  placeholder="Ex: iPhone 11, 12"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">Preço (R$)</Label>
+                <Input
+                  id="price"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="currentStock">Estoque Atual *</Label>
+                <Input
+                  id="currentStock"
+                  name="currentStock"
+                  type="number"
+                  value={formData.currentStock}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="minimumStock">Estoque Mínimo</Label>
+                <Input
+                  id="minimumStock"
+                  name="minimumStock"
+                  type="number"
+                  value={formData.minimumStock}
+                  onChange={handleInputChange}
+                  placeholder="5"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEditItem}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o item "{selectedItem?.name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

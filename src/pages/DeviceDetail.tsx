@@ -1,97 +1,92 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeftIcon, PenIcon, TrashIcon, CheckCircleIcon, AlertCircleIcon, XCircleIcon } from 'lucide-react';
+import { 
+  ArrowLeftIcon, 
+  PenIcon, 
+  TrashIcon, 
+  CheckCircleIcon, 
+  AlertCircleIcon, 
+  XCircleIcon 
+} from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useToast } from '@/components/ui/use-toast';
-
-// Mock device data (in a real app, this would come from a database)
-const devices = [
-  {
-    id: '1',
-    brand: 'Apple',
-    model: 'iPhone 13 Pro',
-    serialNumber: 'IMEI: 123456789012345',
-    type: 'ios',
-    status: 'good',
-    lastService: '22/10/2023',
-    owner: 'João Silva',
-    ownerId: '1',
-    purchaseDate: '15/08/2022',
-    color: 'Grafite',
-    capacity: '256GB',
-    notes: 'Aparelho em boas condições físicas, com pequeno risco na parte traseira.',
-    serviceHistory: [
-      { id: '1', type: 'Troca de Tela', date: '22/10/2023', technician: 'Carlos Oliveira', cost: 450 },
-      { id: '2', type: 'Diagnóstico', date: '15/09/2023', technician: 'Ana Ferreira', cost: 80 }
-    ]
-  },
-  {
-    id: '2',
-    brand: 'Samsung',
-    model: 'Galaxy S22',
-    serialNumber: 'IMEI: 987654321098765',
-    type: 'android',
-    status: 'issue',
-    lastService: '18/10/2023',
-    owner: 'Maria Santos',
-    ownerId: '2',
-    purchaseDate: '20/03/2023',
-    color: 'Preto',
-    capacity: '128GB',
-    notes: 'Problemas na bateria, descarrega muito rápido. Tela com arranhões leves.',
-    serviceHistory: [
-      { id: '1', type: 'Substituição de Bateria', date: '18/10/2023', technician: 'João Silva', cost: 180 }
-    ]
-  },
-  {
-    id: '3',
-    brand: 'Apple',
-    model: 'iPhone 12',
-    serialNumber: 'IMEI: 567890123456789',
-    type: 'ios',
-    status: 'good',
-    lastService: '15/10/2023',
-    owner: 'Pedro Almeida',
-    ownerId: '3',
-    purchaseDate: '05/01/2022',
-    color: 'Azul',
-    capacity: '128GB',
-    notes: 'Aparelho em excelentes condições.',
-    serviceHistory: [
-      { id: '1', type: 'Reparo de Placa', date: '15/10/2023', technician: 'Carlos Oliveira', cost: 320 }
-    ]
-  },
-  {
-    id: '4',
-    brand: 'Xiaomi',
-    model: 'Redmi Note 11',
-    serialNumber: 'IMEI: 345678901234567',
-    type: 'android',
-    status: 'critical',
-    lastService: '10/10/2023',
-    owner: 'Ana Ferreira',
-    ownerId: '4',
-    purchaseDate: '12/04/2023',
-    color: 'Branco',
-    capacity: '64GB',
-    notes: 'Problemas sérios no touch da tela e conector de carga danificado.',
-    serviceHistory: [
-      { id: '1', type: 'Troca de Conector de Carga', date: '10/10/2023', technician: 'Pedro Almeida', cost: 150 }
-    ]
-  }
-];
+import { toast } from 'sonner';
 
 const DeviceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [device, setDevice] = useState<any>(null);
+  const [customer, setCustomer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
-  // Find the device with the matching ID
-  const device = devices.find(d => d.id === id);
+  useEffect(() => {
+    // Load device data from localStorage
+    const loadDeviceData = () => {
+      try {
+        const savedDevices = localStorage.getItem('pauloCell_devices');
+        if (savedDevices) {
+          const devices = JSON.parse(savedDevices);
+          const foundDevice = devices.find((d: any) => d.id === id);
+          
+          if (foundDevice) {
+            setDevice(foundDevice);
+            
+            // Load customer data
+            const savedCustomers = localStorage.getItem('pauloCell_customers');
+            if (savedCustomers && foundDevice.owner) {
+              const customers = JSON.parse(savedCustomers);
+              const foundCustomer = customers.find((c: any) => c.id === foundDevice.owner);
+              
+              if (foundCustomer) {
+                setCustomer(foundCustomer);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading device data:', error);
+        toast.error('Erro ao carregar dados do dispositivo');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDeviceData();
+  }, [id]);
+  
+  const handleDelete = () => {
+    try {
+      const savedDevices = localStorage.getItem('pauloCell_devices');
+      if (savedDevices) {
+        let devices = JSON.parse(savedDevices);
+        devices = devices.filter((d: any) => d.id !== id);
+        localStorage.setItem('pauloCell_devices', JSON.stringify(devices));
+      }
+      
+      toast.success(`Dispositivo removido com sucesso`);
+      navigate('/devices');
+    } catch (error) {
+      console.error('Error deleting device:', error);
+      toast.error('Erro ao excluir dispositivo');
+    }
+  };
+  
+  const handleNewService = () => {
+    navigate('/services/new', { state: { deviceId: device.id, customerId: device.owner } });
+  };
+  
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-[70vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
   
   if (!device) {
     return (
@@ -103,18 +98,6 @@ const DeviceDetail: React.FC = () => {
       </MainLayout>
     );
   }
-  
-  const handleDelete = () => {
-    toast({
-      title: "Dispositivo excluído",
-      description: `${device.brand} ${device.model} foi removido com sucesso.`,
-    });
-    navigate('/devices');
-  };
-  
-  const handleNewService = () => {
-    navigate('/services/new', { state: { deviceId: device.id, customerId: device.ownerId } });
-  };
   
   return (
     <MainLayout>
@@ -140,17 +123,21 @@ const DeviceDetail: React.FC = () => {
           <Card className="lg:col-span-2 p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-xl font-semibold">{device.brand} {device.model}</h2>
+                <h2 className="text-xl font-semibold">
+                  {device.brand === 'other' ? 'Outra Marca' : device.brand} {device.model}
+                </h2>
                 <p className="text-muted-foreground">{device.serialNumber}</p>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate(`/customers/${device.ownerId}`)}
-                >
-                  Ver proprietário
-                </Button>
+                {customer && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/customers/${device.owner}`)}
+                  >
+                    Ver proprietário
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   size="icon"
@@ -171,7 +158,7 @@ const DeviceDetail: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Proprietário</h3>
-                <p className="font-medium">{device.owner}</p>
+                <p className="font-medium">{customer ? customer.name : device.ownerName || 'Não especificado'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
@@ -186,39 +173,45 @@ const DeviceDetail: React.FC = () => {
                       <AlertCircleIcon size={16} className="text-amber-500 mr-1" />
                       <span>Problemas leves</span>
                     </>
-                  ) : (
+                  ) : device.status === 'critical' ? (
                     <>
                       <XCircleIcon size={16} className="text-red-600 mr-1" />
                       <span>Problemas críticos</span>
                     </>
+                  ) : (
+                    <span>Não especificado</span>
                   )}
                 </div>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Tipo</h3>
-                <p className="font-medium capitalize">{device.type}</p>
+                <p className="font-medium">
+                  {device.type === 'cellphone' ? 'Celular' : 
+                   device.type === 'tablet' ? 'Tablet' : 
+                   device.type === 'notebook' ? 'Notebook' : 'Não especificado'}
+                </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Último Serviço</h3>
-                <p className="font-medium">{device.lastService}</p>
+                <p className="font-medium">{device.lastService || 'Nenhum serviço registrado'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Data de Compra</h3>
-                <p className="font-medium">{device.purchaseDate}</p>
+                <p className="font-medium">{device.purchaseDate || 'Não especificada'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Cor</h3>
-                <p className="font-medium">{device.color}</p>
+                <p className="font-medium">{device.color || 'Não especificada'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Capacidade</h3>
-                <p className="font-medium">{device.capacity}</p>
+                <p className="font-medium">{device.capacity || 'Não especificada'}</p>
               </div>
             </div>
             
             <div className="mb-6">
               <h3 className="text-sm font-medium text-muted-foreground mb-1">Observações</h3>
-              <p>{device.notes}</p>
+              <p>{device.notes || 'Nenhuma observação'}</p>
             </div>
             
             <Button onClick={handleNewService}>Novo Serviço</Button>
@@ -227,9 +220,9 @@ const DeviceDetail: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Histórico de Serviços</h2>
             
-            {device.serviceHistory.length > 0 ? (
+            {device.serviceHistory && device.serviceHistory.length > 0 ? (
               <div className="space-y-4">
-                {device.serviceHistory.map((service, idx) => (
+                {device.serviceHistory.map((service: any, idx: number) => (
                   <motion.div 
                     key={service.id}
                     initial={{ opacity: 0, y: 10 }}
