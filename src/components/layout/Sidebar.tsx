@@ -32,6 +32,17 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar }) => {
     { path: '/settings', name: 'Configurações', icon: SettingsIcon },
   ];
   
+  // Função para verificar se uma rota está ativa, incluindo subrotas
+  const isRouteActive = (path: string) => {
+    // Check exact match first
+    if (location.pathname === path) return true;
+    
+    // Check if it's a subroute (e.g. /customers/new should highlight /customers)
+    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
+    
+    return false;
+  };
+  
   return (
     <motion.div 
       className="h-screen bg-sidebar border-r border-sidebar-border"
@@ -73,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar }) => {
                   to={item.path}
                   className={`
                     flex items-center px-3 py-3 rounded-lg transition-all
-                    ${location.pathname === item.path 
+                    ${isRouteActive(item.path) 
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
                       : 'text-sidebar-foreground hover:bg-sidebar-accent'}
                   `}

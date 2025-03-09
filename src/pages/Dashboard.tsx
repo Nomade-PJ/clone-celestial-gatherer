@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -9,13 +9,16 @@ import {
   PackageIcon, 
   ArrowRightIcon,
   TrendingUpIcon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  RefreshCwIcon,
+  Loader2Icon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import StatCard from '@/components/ui/StatCard';
 import ServiceCard from '@/components/ui/ServiceCard';
 import CustomerCard from '@/components/ui/CustomerCard';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -25,10 +28,14 @@ const Dashboard: React.FC = () => {
   const [services, setServices] = useState<any[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
   
-  // Load data from localStorage on component mount and whenever localStorage changes
-  useEffect(() => {
-    const loadData = () => {
+  // Load data from localStorage
+  const loadData = useCallback(() => {
+    setIsRefreshing(true);
+    
+    try {
       // Load customers
       const savedCustomers = localStorage.getItem('pauloCell_customers');
       if (savedCustomers) {
@@ -53,18 +60,33 @@ const Dashboard: React.FC = () => {
         setInventory(JSON.parse(savedInventory));
       }
       
+      setLastUpdated(new Date());
       console.log('Dashboard loaded');
-    };
-    
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Erro ao carregar dados');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+  
+  // Initial load and set up polling
+  useEffect(() => {
     // Initial load
     loadData();
     
     // Set up interval to check for data changes (real-time updates)
-    const interval = setInterval(loadData, 2000);
+    const interval = setInterval(loadData, 5000);
     
     // Clean up interval on component unmount
     return () => clearInterval(interval);
-  }, []);
+  }, [loadData]);
+  
+  // Manual refresh function
+  const handleRefresh = () => {
+    loadData();
+    toast.success('Dados atualizados');
+  };
   
   // Get recent services (up to 3)
   const recentServices = services.slice(0, 3);
@@ -88,6 +110,29 @@ const Dashboard: React.FC = () => {
   // Calculate total revenue from services
   const totalRevenue = services.reduce((total, service) => total + (service.price || 0), 0);
   
+  // Format the last updated time
+  const formatLastUpdated = (date: Date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return `há ${diffInSeconds} segundo${diffInSeconds === 1 ? '' : 's'}`;
+    }
+    
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+      return `há ${diffInMinutes} minuto${diffInMinutes === 1 ? '' : 's'}`;
+    }
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+      return `há ${diffInHours} hora${diffInHours === 1 ? '' : 's'}`;
+    }
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `há ${diffInDays} dia${diffInDays === 1 ? '' : 's'}`;
+  };
+  
   return (
     <MainLayout>
       <motion.div 
@@ -101,7 +146,24 @@ const Dashboard: React.FC = () => {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Visão geral do seu negócio</p>
           </div>
-          <Button onClick={() => navigate('/reports')}>Ver relatórios completos</Button>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Atualizado {formatLastUpdated(lastUpdated)}
+            </p>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <Loader2Icon size={16} className="animate-spin" />
+              ) : (
+                <RefreshCwIcon size={16} />
+              )}
+            </Button>
+            <Button onClick={() => navigate('/reports')}>Ver relatórios completos</Button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -9,12 +9,26 @@ import {
   DownloadIcon,
   AlertCircleIcon,
   ShieldAlertIcon,
-  CheckIcon
+  CheckIcon,
+  XIcon,
+  TagIcon,
+  BoxIcon,
+  RefreshCwIcon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 // Empty initial data - ready for new entries
 const initialInventoryItems: any[] = [];
@@ -22,7 +36,9 @@ const initialInventoryItems: any[] = [];
 const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [inventoryItems, setInventoryItems] = useState(initialInventoryItems);
-  const { toast } = useToast();
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [stockFilter, setStockFilter] = useState<string>('all');
+  const { toast: uiToast } = useToast();
   const navigate = useNavigate();
   
   // Load inventory items from localStorage on component mount
@@ -38,19 +54,82 @@ const Inventory: React.FC = () => {
     localStorage.setItem('pauloCell_inventory', JSON.stringify(inventoryItems));
   }, [inventoryItems]);
   
-  const filteredItems = inventoryItems.filter(item => 
-    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.compatibility?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+  const handleFilterToggle = (filter: string) => {
+    setActiveFilters(prev => 
+      prev.includes(filter) 
+        ? prev.filter(f => f !== filter) 
+        : [...prev, filter]
+    );
+  };
+  
+  const clearFilters = () => {
+    setActiveFilters([]);
+    setStockFilter('all');
+    setSearchTerm('');
+  };
+  
+  const applyFilters = (itemList: any[]) => {
+    // First apply search term
+    let filtered = itemList.filter(item => 
+      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.compatibility?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    // Then apply stock filter
+    if (stockFilter === 'critical') {
+      filtered = filtered.filter(item => item.currentStock === 0);
+    } else if (stockFilter === 'low') {
+      filtered = filtered.filter(item => item.currentStock > 0 && item.currentStock < item.minimumStock);
+    } else if (stockFilter === 'ok') {
+      filtered = filtered.filter(item => item.currentStock >= item.minimumStock);
+    }
+    
+    // Then apply any additional filters
+    if (activeFilters.includes('screens')) {
+      filtered = filtered.filter(item => item.category === 'Tela');
+    }
+    
+    if (activeFilters.includes('batteries')) {
+      filtered = filtered.filter(item => item.category === 'Bateria');
+    }
+    
+    if (activeFilters.includes('accessories')) {
+      filtered = filtered.filter(item => item.category === 'Acessório');
+    }
+    
+    return filtered;
+  };
+  
+  const filteredItems = applyFilters(inventoryItems);
+  
   const handleNewItem = () => {
-    // Will be implemented in a separate component
-    toast({
-      title: "Novo item",
-      description: "Funcionalidade de adicionar novo item em breve disponível!",
-    });
+    // Mock item creation for demo
+    const newItem = {
+      id: `item_${Date.now()}`,
+      name: `Novo Item ${inventoryItems.length + 1}`,
+      sku: `SKU${Math.floor(1000 + Math.random() * 9000)}`,
+      category: ['Tela', 'Bateria', 'Acessório', 'Placa'][Math.floor(Math.random() * 4)],
+      compatibility: ['iPhone', 'Samsung', 'Xiaomi', 'Motorola'][Math.floor(Math.random() * 4)],
+      price: Math.floor(50 + Math.random() * 450),
+      currentStock: Math.floor(Math.random() * 15),
+      minimumStock: 5,
+      lastPurchase: `${Math.floor(1 + Math.random() * 30)}/10/2023`
+    };
+    
+    setInventoryItems(prev => [newItem, ...prev]);
+    toast.success('Novo item adicionado ao estoque');
+  };
+  
+  const exportInventory = (format: string) => {
+    // In a real app, this would generate the actual file
+    // For now, just show a toast
+    toast.success(`Estoque exportado em formato ${format.toUpperCase()}`);
+  };
+  
+  const handleStockFilterChange = (status: string) => {
+    setStockFilter(status);
   };
   
   return (
@@ -85,41 +164,105 @@ const Inventory: React.FC = () => {
           </div>
           
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" className="gap-2">
-              <FilterIcon size={16} />
-              <span>Filtrar</span>
-              <ChevronDownIcon size={16} />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <FilterIcon size={16} />
+                  <span>Filtrar</span>
+                  <ChevronDownIcon size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => handleFilterToggle('screens')}>
+                    <BoxIcon className="mr-2 h-4 w-4" />
+                    <span>Telas</span>
+                    {activeFilters.includes('screens') && <Badge className="ml-auto">Ativo</Badge>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterToggle('batteries')}>
+                    <BoxIcon className="mr-2 h-4 w-4" />
+                    <span>Baterias</span>
+                    {activeFilters.includes('batteries') && <Badge className="ml-auto">Ativo</Badge>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterToggle('accessories')}>
+                    <BoxIcon className="mr-2 h-4 w-4" />
+                    <span>Acessórios</span>
+                    {activeFilters.includes('accessories') && <Badge className="ml-auto">Ativo</Badge>}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={clearFilters}>
+                    <XIcon className="mr-2 h-4 w-4" />
+                    <span>Limpar Filtros</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
-            <Button variant="outline" className="gap-2">
-              <DownloadIcon size={16} />
-              <span className="hidden sm:inline">Exportar</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <DownloadIcon size={16} />
+                  <span className="hidden sm:inline">Exportar</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => exportInventory('pdf')}>
+                    <DownloadIcon className="mr-2 h-4 w-4" />
+                    <span>Exportar como PDF</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportInventory('excel')}>
+                    <DownloadIcon className="mr-2 h-4 w-4" />
+                    <span>Exportar como Excel</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportInventory('csv')}>
+                    <DownloadIcon className="mr-2 h-4 w-4" />
+                    <span>Exportar como CSV</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
         <div className="flex gap-4 overflow-x-auto pb-4">
-          <Button variant="outline" className="gap-2 whitespace-nowrap">
+          <Button 
+            variant={stockFilter === 'all' ? 'default' : 'outline'} 
+            className="gap-2 whitespace-nowrap"
+            onClick={() => handleStockFilterChange('all')}
+          >
             <span>Todos os itens</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
               {inventoryItems.length}
             </span>
           </Button>
-          <Button variant="outline" className="gap-2 whitespace-nowrap">
+          <Button 
+            variant={stockFilter === 'critical' ? 'default' : 'outline'} 
+            className="gap-2 whitespace-nowrap"
+            onClick={() => handleStockFilterChange('critical')}
+          >
             <ShieldAlertIcon size={16} className="text-red-600" />
             <span>Estoque crítico</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
               {inventoryItems.filter(i => i.currentStock === 0).length}
             </span>
           </Button>
-          <Button variant="outline" className="gap-2 whitespace-nowrap">
+          <Button 
+            variant={stockFilter === 'low' ? 'default' : 'outline'} 
+            className="gap-2 whitespace-nowrap"
+            onClick={() => handleStockFilterChange('low')}
+          >
             <AlertCircleIcon size={16} className="text-amber-500" />
             <span>Estoque baixo</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
               {inventoryItems.filter(i => i.currentStock > 0 && i.currentStock < i.minimumStock).length}
             </span>
           </Button>
-          <Button variant="outline" className="gap-2 whitespace-nowrap">
+          <Button 
+            variant={stockFilter === 'ok' ? 'default' : 'outline'} 
+            className="gap-2 whitespace-nowrap"
+            onClick={() => handleStockFilterChange('ok')}
+          >
             <CheckIcon size={16} className="text-green-600" />
             <span>Estoque adequado</span>
             <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
@@ -127,6 +270,31 @@ const Inventory: React.FC = () => {
             </span>
           </Button>
         </div>
+        
+        {(activeFilters.length > 0 || stockFilter !== 'all') && (
+          <div className="flex flex-wrap gap-2">
+            {stockFilter !== 'all' && (
+              <Badge variant="outline" className="flex items-center gap-1 px-3 py-1">
+                Status: {
+                  stockFilter === 'critical' ? 'Estoque crítico' : 
+                  stockFilter === 'low' ? 'Estoque baixo' : 
+                  'Estoque adequado'
+                }
+                <XIcon size={14} className="cursor-pointer" onClick={() => setStockFilter('all')} />
+              </Badge>
+            )}
+            {activeFilters.map(filter => (
+              <Badge key={filter} variant="outline" className="flex items-center gap-1 px-3 py-1">
+                {filter === 'screens' ? 'Telas' : 
+                 filter === 'batteries' ? 'Baterias' : 'Acessórios'}
+                <XIcon size={14} className="cursor-pointer" onClick={() => handleFilterToggle(filter)} />
+              </Badge>
+            ))}
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7">
+              Limpar filtros
+            </Button>
+          </div>
+        )}
         
         {filteredItems.length > 0 ? (
           <div className="bg-card rounded-xl border border-border overflow-hidden">
