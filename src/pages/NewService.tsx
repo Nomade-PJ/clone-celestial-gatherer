@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -12,24 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-
-// Mock data para peças e acessórios disponíveis
-const availableParts = [
-  { id: '1', name: 'Tela iPhone 13 Pro', price: 350, stock: 5 },
-  { id: '2', name: 'Bateria Samsung Galaxy S22', price: 120, stock: 3 },
-  { id: '3', name: 'Conector de Carga iPhone 12', price: 80, stock: 8 },
-  { id: '4', name: 'Tela Xiaomi Redmi Note 11', price: 180, stock: 4 },
-  { id: '5', name: 'Alto Falante iPhone 13', price: 60, stock: 12 },
-  { id: '6', name: 'Cabo Flex Motorola Moto G32', price: 45, stock: 6 },
-];
-
-// Mock data para técnicos
-const technicians = [
-  { id: '1', name: 'Carlos Oliveira' },
-  { id: '2', name: 'Ana Ferreira' },
-  { id: '3', name: 'Pedro Almeida' },
-  { id: '4', name: 'João Silva' },
-];
 
 interface SelectedPart {
   id: string;
@@ -46,6 +29,7 @@ const NewService: React.FC = () => {
   
   const [customers, setCustomers] = useState<any[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [selectedParts, setSelectedParts] = useState<SelectedPart[]>([]);
   const [laborCost, setLaborCost] = useState<number>(100);
   const [formData, setFormData] = useState({
@@ -58,6 +42,15 @@ const NewService: React.FC = () => {
     notes: '',
   });
   
+  // Technicians data
+  const technicians = [
+    { id: '1', name: 'Carlos Oliveira' },
+    { id: '2', name: 'Ana Ferreira' },
+    { id: '3', name: 'Pedro Almeida' },
+    { id: '4', name: 'João Silva' },
+  ];
+  
+  // Load data from localStorage
   useEffect(() => {
     const savedCustomers = localStorage.getItem('pauloCell_customers');
     if (savedCustomers) {
@@ -67,6 +60,21 @@ const NewService: React.FC = () => {
     const savedDevices = localStorage.getItem('pauloCell_devices');
     if (savedDevices) {
       setDevices(JSON.parse(savedDevices));
+    }
+    
+    const savedInventory = localStorage.getItem('pauloCell_inventory');
+    if (savedInventory) {
+      setInventoryItems(JSON.parse(savedInventory));
+    } else {
+      // Fallback to mock data if no inventory is found
+      setInventoryItems([
+        { id: '1', name: 'Tela iPhone 13 Pro', price: 350, stock: 5 },
+        { id: '2', name: 'Bateria Samsung Galaxy S22', price: 120, stock: 3 },
+        { id: '3', name: 'Conector de Carga iPhone 12', price: 80, stock: 8 },
+        { id: '4', name: 'Tela Xiaomi Redmi Note 11', price: 180, stock: 4 },
+        { id: '5', name: 'Alto Falante iPhone 13', price: 60, stock: 12 },
+        { id: '6', name: 'Cabo Flex Motorola Moto G32', price: 45, stock: 6 },
+      ]);
     }
   }, []);
   
@@ -80,7 +88,7 @@ const NewService: React.FC = () => {
   };
   
   const addPart = (partId: string) => {
-    const part = availableParts.find(p => p.id === partId);
+    const part = inventoryItems.find(p => p.id === partId);
     if (part) {
       const existingPart = selectedParts.find(p => p.id === partId);
       if (existingPart) {
@@ -119,22 +127,35 @@ const NewService: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Get customer and device names
+    const customer = customers.find(c => c.id === formData.customerId);
+    const device = devices.find(d => d.id === formData.deviceId);
+    const technician = technicians.find(t => t.id === formData.technicianId);
+    
     const serviceData = {
       id: uuidv4(),
       ...formData,
+      type: formData.serviceType,
       parts: selectedParts,
       laborCost,
       totalCost: calculateTotal(),
+      price: calculateTotal(), // Added for ServiceCard compatibility
       createdAt: new Date().toISOString(),
-      customer: customers.find(c => c.id === formData.customerId)?.name || 'Cliente não encontrado',
-      device: devices.find(d => d.id === formData.deviceId)?.name || 'Dispositivo não encontrado',
+      createDate: new Date().toLocaleDateString(), // Added for ServiceCard compatibility
+      customer: customer?.name || 'Cliente não encontrado',
+      device: device?.name || 'Dispositivo não encontrado',
+      technician: technician?.name || 'Não atribuído',
+      estimatedCompletion: formData.estimatedCompletion || undefined,
     };
     
+    // Get existing services or initialize empty array
     const savedServices = localStorage.getItem('pauloCell_services');
     const services = savedServices ? JSON.parse(savedServices) : [];
     
+    // Add new service
     services.push(serviceData);
     
+    // Save to localStorage
     localStorage.setItem('pauloCell_services', JSON.stringify(services));
     
     toast({
@@ -170,7 +191,10 @@ const NewService: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="customer">Cliente</Label>
-                <Select defaultValue={formData.customerId || undefined}>
+                <Select 
+                  value={formData.customerId} 
+                  onValueChange={(value) => handleSelectChange('customerId', value)}
+                >
                   <SelectTrigger id="customer">
                     <SelectValue placeholder="Selecione o cliente" />
                   </SelectTrigger>
@@ -184,13 +208,18 @@ const NewService: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="device">Dispositivo</Label>
-                <Select defaultValue={formData.deviceId || undefined}>
+                <Select 
+                  value={formData.deviceId}
+                  onValueChange={(value) => handleSelectChange('deviceId', value)}
+                >
                   <SelectTrigger id="device">
                     <SelectValue placeholder="Selecione o dispositivo" />
                   </SelectTrigger>
                   <SelectContent>
                     {devices.map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.brand} {d.model}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -198,24 +227,30 @@ const NewService: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="serviceType">Tipo de Serviço</Label>
-                <Select>
+                <Select
+                  value={formData.serviceType}
+                  onValueChange={(value) => handleSelectChange('serviceType', value)}
+                >
                   <SelectTrigger id="serviceType">
                     <SelectValue placeholder="Selecione o tipo de serviço" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="screen">Troca de Tela</SelectItem>
-                    <SelectItem value="battery">Substituição de Bateria</SelectItem>
-                    <SelectItem value="board">Reparo de Placa</SelectItem>
-                    <SelectItem value="connector">Troca de Conector de Carga</SelectItem>
-                    <SelectItem value="software">Atualização de Software</SelectItem>
-                    <SelectItem value="cleaning">Limpeza Interna</SelectItem>
+                    <SelectItem value="Troca de Tela">Troca de Tela</SelectItem>
+                    <SelectItem value="Substituição de Bateria">Substituição de Bateria</SelectItem>
+                    <SelectItem value="Reparo de Placa">Reparo de Placa</SelectItem>
+                    <SelectItem value="Troca de Conector de Carga">Troca de Conector de Carga</SelectItem>
+                    <SelectItem value="Atualização de Software">Atualização de Software</SelectItem>
+                    <SelectItem value="Limpeza Interna">Limpeza Interna</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="technician">Técnico</Label>
-                <Select>
+                <Select
+                  value={formData.technicianId}
+                  onValueChange={(value) => handleSelectChange('technicianId', value)}
+                >
                   <SelectTrigger id="technician">
                     <SelectValue placeholder="Selecione o técnico" />
                   </SelectTrigger>
@@ -229,12 +264,21 @@ const NewService: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="estimatedCompletion">Previsão de Conclusão</Label>
-                <Input id="estimatedCompletion" type="date" />
+                <Input 
+                  id="estimatedCompletion" 
+                  name="estimatedCompletion"
+                  value={formData.estimatedCompletion}
+                  onChange={handleInputChange}
+                  type="date" 
+                />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select defaultValue="waiting">
+                <Select 
+                  value={formData.status}
+                  onValueChange={(value) => handleSelectChange('status', value)}
+                >
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
@@ -257,7 +301,7 @@ const NewService: React.FC = () => {
                       <SelectValue placeholder="Adicionar peça" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableParts.map(part => (
+                      {inventoryItems.map(part => (
                         <SelectItem key={part.id} value={part.id}>
                           {part.name} - R$ {part.price.toFixed(2)}
                         </SelectItem>
@@ -356,6 +400,9 @@ const NewService: React.FC = () => {
               <Label htmlFor="notes">Observações</Label>
               <Textarea 
                 id="notes" 
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
                 placeholder="Informações adicionais sobre o serviço, condições do dispositivo, solicitações do cliente, etc."
                 className="min-h-32"
               />

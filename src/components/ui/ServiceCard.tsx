@@ -12,7 +12,7 @@ interface ServiceCardProps {
     device: string;
     createDate: string;
     estimatedCompletion?: string;
-    price: number;
+    price: number | undefined;
     technician?: string;
   };
   index: number;
@@ -95,7 +95,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, index }) => {
         </div>
         <div>
           <span className="text-muted-foreground">Valor:</span>
-          <p className="font-medium">R$ {service.price.toFixed(2)}</p>
+          <p className="font-medium">R$ {service.price !== undefined ? service.price.toFixed(2) : '0.00'}</p>
         </div>
         <div>
           <span className="text-muted-foreground">Técnico:</span>

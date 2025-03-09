@@ -20,7 +20,7 @@ import {
 import MainLayout from '@/components/layout/MainLayout';
 import ServiceCard from '@/components/ui/ServiceCard';
 import { Button } from '@/components/ui/button';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from '@/components/ui/use-toast';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { toast } from 'sonner';
 
 // Empty initial data - ready for new entries
 const initialServices: any[] = [];
@@ -42,11 +42,16 @@ const Services: React.FC = () => {
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
   
+  console.log("Loading services page");
+  
   // Load services from localStorage on component mount
   useEffect(() => {
     const savedServices = localStorage.getItem('pauloCell_services');
+    console.log("Saved services from localStorage:", savedServices);
     if (savedServices) {
-      setServices(JSON.parse(savedServices));
+      const parsedServices = JSON.parse(savedServices);
+      console.log("Parsed services:", parsedServices);
+      setServices(parsedServices);
     }
   }, []);
 
