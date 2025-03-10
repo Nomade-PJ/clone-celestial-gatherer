@@ -9,7 +9,8 @@ import {
   XIcon,
   LogOutIcon,
   Mail,
-  Phone
+  Phone,
+  Github
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -86,6 +87,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 
   const handleWhatsAppContact = () => {
     window.open('https://wa.me/5598992022352', '_blank');
+  };
+  
+  const handleGithubContact = () => {
+    window.open('https://github.com/Nomade-PJ', '_blank');
   };
   
   return (
@@ -239,6 +244,16 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 <p className="font-medium">WhatsApp</p>
                 <p className="text-sm text-muted-foreground">(98) 99202-2352</p>
               </div>
+            </div>
+            <div className="flex items-center gap-4 p-3 border rounded-md hover:bg-muted/50 cursor-pointer" onClick={handleGithubContact}>
+              <Github className="h-6 w-6 text-gray-800" />
+              <div>
+                <p className="font-medium">GitHub</p>
+                <p className="text-sm text-muted-foreground">Nomade-PJ</p>
+              </div>
+            </div>
+            <div className="mt-6 text-center text-sm text-muted-foreground">
+              ©Todos os direitos reserved - NomadePJ/jose Carlos
             </div>
           </div>
           <DialogFooter>

@@ -28,7 +28,7 @@ googleProvider.setCustomParameters({
   prompt: 'select_account',
   // Adding these parameters to ensure proper OAuth flow - make sure access_type is a string
   access_type: 'offline',
-  include_granted_scopes: true
+  include_granted_scopes: 'true' // Changed to string instead of boolean
 });
 // Add necessary scopes for the application
 googleProvider.addScope('profile');
