@@ -97,16 +97,16 @@ const Dashboard: React.FC = () => {
     toast.success('Dados atualizados');
   };
   
-  // Get recent services (up to 3)
-  const recentServices = services.slice(0, 3);
+  // Get recent services (modified to show 5 most recent)
+  const recentServices = services.slice(0, 5);
   
-  // Get recent customers (up to 2)
-  const recentCustomers = customers.slice(0, 2);
+  // Get recent customers (modified to show 3 most recent)
+  const recentCustomers = customers.slice(0, 3);
   
-  // Get low stock items (up to 3)
+  // Get low stock items (modified to show 5 most recent)
   const lowStockItems = inventory
     .filter(item => Number(item.currentStock) < 5)
-    .slice(0, 3);
+    .slice(0, 5);
   
   const handleServiceClick = (id: string) => {
     navigate(`/services/${id}`);
