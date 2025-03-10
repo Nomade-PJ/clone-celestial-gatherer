@@ -1,3 +1,4 @@
+
 // Import the Firebase SDK components we need
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
@@ -25,7 +26,7 @@ const googleProvider = new GoogleAuthProvider();
 // Configure Google provider settings with all necessary parameters
 googleProvider.setCustomParameters({
   prompt: 'select_account',
-  // Adding these parameters to ensure proper OAuth flow
+  // Adding these parameters to ensure proper OAuth flow - make sure access_type is a string
   access_type: 'offline',
   include_granted_scopes: true
 });

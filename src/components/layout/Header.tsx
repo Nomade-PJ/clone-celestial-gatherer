@@ -6,11 +6,15 @@ import {
   PlusIcon,
   CheckIcon,
   Trash2Icon,
-  XIcon
+  XIcon,
+  LogOutIcon,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +25,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -28,6 +40,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const { 
     notifications, 
     unreadCount, 
@@ -36,6 +49,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     removeNotification, 
     clearAllNotifications 
   } = useNotifications();
+  const [developerModalOpen, setDeveloperModalOpen] = React.useState(false);
   
   const handleNewService = () => {
     navigate('/services/new');
@@ -55,6 +69,23 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         -Math.round((Date.now() - timestamp) / (1000 * 60)),
         'minute'
       );
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const handleDeveloperContact = () => {
+    setDeveloperModalOpen(true);
+  };
+
+  const handleEmailContact = () => {
+    window.open('mailto:josecarlosdev24h@gmail.com', '_blank');
+  };
+
+  const handleWhatsAppContact = () => {
+    window.open('https://wa.me/5598992022352', '_blank');
   };
   
   return (
@@ -161,13 +192,60 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src="/logo.svg" alt="Logo" className="p-0" />
-            </Avatar>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white cursor-pointer">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src="/logo.svg" alt="Logo" className="p-0" />
+                </Avatar>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleDeveloperContact} className="cursor-pointer">
+                <Mail className="mr-2 h-4 w-4" />
+                <span>Desenvolvedor</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 hover:text-red-700">
+                <LogOutIcon className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Developer Contact Modal */}
+      <Dialog open={developerModalOpen} onOpenChange={setDeveloperModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contato com o Desenvolvedor</DialogTitle>
+            <DialogDescription>
+              Entre em contato com o desenvolvedor do projeto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-4 p-3 border rounded-md hover:bg-muted/50 cursor-pointer" onClick={handleEmailContact}>
+              <Mail className="h-6 w-6 text-primary" />
+              <div>
+                <p className="font-medium">Email</p>
+                <p className="text-sm text-muted-foreground">josecarlosdev24h@gmail.com</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-3 border rounded-md hover:bg-muted/50 cursor-pointer" onClick={handleWhatsAppContact}>
+              <Phone className="h-6 w-6 text-green-600" />
+              <div>
+                <p className="font-medium">WhatsApp</p>
+                <p className="text-sm text-muted-foreground">(98) 99202-2352</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setDeveloperModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
