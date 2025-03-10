@@ -4,6 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Devices from "./pages/Devices";
@@ -39,46 +42,63 @@ const queryClient = new QueryClient({
   }
 });
 
+// Create a protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const storedUser = localStorage.getItem('pauloCell_user');
+  if (!storedUser) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <NotificationProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+      <BrowserRouter>
+        <AuthProvider>
+          <NotificationProvider>
+            <Toaster />
+            <Sonner />
+            <AnimatePresence mode="wait">
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
             
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/new" element={<NewCustomer />} />
-            <Route path="/customers/:id" element={<CustomerDetail />} />
-            <Route path="/customers/edit/:id" element={<EditCustomer />} />
+            <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/customers/new" element={<ProtectedRoute><NewCustomer /></ProtectedRoute>} />
+            <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
+            <Route path="/customers/edit/:id" element={<ProtectedRoute><EditCustomer /></ProtectedRoute>} />
             
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/devices/new" element={<NewDevice />} />
-            <Route path="/devices/:id" element={<DeviceDetail />} />
-            <Route path="/devices/edit/:id" element={<EditDevice />} />
+            <Route path="/devices" element={<ProtectedRoute><Devices /></ProtectedRoute>} />
+            <Route path="/devices/new" element={<ProtectedRoute><NewDevice /></ProtectedRoute>} />
+            <Route path="/devices/:id" element={<ProtectedRoute><DeviceDetail /></ProtectedRoute>} />
+            <Route path="/devices/edit/:id" element={<ProtectedRoute><EditDevice /></ProtectedRoute>} />
             
-            <Route path="/services" element={<Services />} />
-            <Route path="/services/new" element={<NewService />} />
-            <Route path="/services/:id" element={<ServiceDetail />} />
-            <Route path="/services/edit/:id" element={<EditService />} />
+            <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
+            <Route path="/services/new" element={<ProtectedRoute><NewService /></ProtectedRoute>} />
+            <Route path="/services/:id" element={<ProtectedRoute><ServiceDetail /></ProtectedRoute>} />
+            <Route path="/services/edit/:id" element={<ProtectedRoute><EditService /></ProtectedRoute>} />
             
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/documents/new" element={<NewDocument />} />
-            <Route path="/documents/:id" element={<DocumentDetail />} />
+            <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+            <Route path="/documents/new" element={<ProtectedRoute><NewDocument /></ProtectedRoute>} />
+            <Route path="/documents/:id" element={<ProtectedRoute><DocumentDetail /></ProtectedRoute>} />
             
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/notification-demo" element={<NotificationDemo />} />
+            <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/notification-demo" element={<ProtectedRoute><NotificationDemo /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AnimatePresence>
+              </Routes>
+            </AnimatePresence>
+          </NotificationProvider>
+        </AuthProvider>
       </BrowserRouter>
-      </NotificationProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
