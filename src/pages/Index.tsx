@@ -70,21 +70,13 @@ const Index = () => {
           </motion.div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex justify-center">
           <Button 
             size="lg" 
             onClick={() => navigate('/login')}
-            className="px-8"
+            className="px-12 py-6 text-lg font-medium shadow-lg hover:shadow-xl transition-all"
           >
             Entrar no Sistema
-          </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            onClick={() => navigate('/register')}
-            className="px-8"
-          >
-            Criar Conta
           </Button>
         </div>
       </motion.div>

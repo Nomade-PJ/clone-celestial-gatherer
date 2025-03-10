@@ -25,7 +25,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
+
 import { toast } from '@/components/ui/use-toast';
 
 // Icons
@@ -40,7 +40,7 @@ const loginFormSchema = z.object({
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 const Login: React.FC = () => {
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -65,17 +65,7 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      await loginWithGoogle();
-      // Navigation is handled in the AuthContext
-    } catch (error) {
-      // Error handling is done in the AuthContext
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -165,37 +155,9 @@ const Login: React.FC = () => {
               </form>
             </Form>
 
-            <div className="mt-4 flex items-center">
-              <Separator className="flex-1" />
-              <span className="mx-2 text-xs text-muted-foreground">OU</span>
-              <Separator className="flex-1" />
-            </div>
 
-            <Button
-              variant="outline"
-              className="mt-4 w-full"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-            >
-              <img
-                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                alt="Google"
-                className="mr-2 h-5 w-5"
-              />
-              Entrar com Google
-            </Button>
           </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-muted-foreground">
-              Não tem uma conta?{' '}
-              <Link
-                to="/register"
-                className="font-medium text-primary hover:underline"
-              >
-                Cadastre-se
-              </Link>
-            </p>
-          </CardFooter>
+          {/* CardFooter removed as requested */}
         </Card>
       </motion.div>
     </div>

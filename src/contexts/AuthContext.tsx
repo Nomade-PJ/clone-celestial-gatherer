@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
+import { auth, googleProvider } from '@/lib/firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 interface User {
   id: string;
@@ -69,18 +71,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     try {
-      // TODO: Implement Google OAuth integration
+      // Clear any previous error messages
+      const errorElement = document.getElementById('google-login-error');
+      if (errorElement) {
+        errorElement.textContent = '';
+        errorElement.style.display = 'none';
+      }
+
+      console.log('Iniciando login com Google...');
+      // Use signInWithRedirect instead of signInWithPopup to avoid popup blockers
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Login com Google bem-sucedido:', result);
+      
+      // The signed-in user info
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const user = result.user;
+      
+      console.log('Usuário autenticado:', user);
+      
+      // Create a user object with the data we need
+      const newUser = {
+        id: user.uid,
+        name: user.displayName || 'Usuário Google',
+        email: user.email || ''
+      };
+      
+      setUser(newUser);
+      localStorage.setItem('pauloCell_user', JSON.stringify(newUser));
+      
       toast({
-        variant: 'destructive',
-        title: 'Não implementado',
-        description: 'O login com Google será implementado em breve.'
+        title: 'Login realizado com sucesso!',
+        description: 'Bem-vindo ao sistema Paulo Cell.'
       });
+      
+      navigate('/dashboard');
     } catch (error) {
+      console.error('Google login error:', error);
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = 'Ocorreu um erro ao fazer login com Google.';
+      
+      if (error instanceof Error) {
+        // Check for specific Firebase auth error codes
+        const errorCode = (error as any).code;
+        console.error('Código de erro:', errorCode);
+        console.error('Mensagem de erro completa:', error.message);
+        
+        if (errorCode === 'auth/popup-closed-by-user') {
+          errorMessage = 'O popup de login foi fechado antes de completar a autenticação.';
+        } else if (errorCode === 'auth/popup-blocked') {
+          errorMessage = 'O popup de login foi bloqueado pelo navegador. Por favor, permita popups para este site.';
+        } else if (errorCode === 'auth/cancelled-popup-request') {
+          errorMessage = 'A solicitação de login foi cancelada.';
+        } else if (errorCode === 'auth/network-request-failed') {
+          errorMessage = 'Falha na conexão de rede. Verifique sua conexão com a internet.';
+        } else if (errorCode === 'auth/invalid-api-key') {
+          errorMessage = 'A chave de API do Firebase é inválida. Contate o administrador do sistema.';
+        } else if (errorCode === 'auth/unauthorized-domain') {
+          errorMessage = 'Este domínio não está autorizado para operações OAuth. Contate o administrador do sistema.';
+        } else if (errorCode === 'auth/operation-not-allowed') {
+          errorMessage = 'O login com Google não está habilitado. Contate o administrador do sistema.';
+        } else if (errorCode === 'auth/internal-error') {
+          errorMessage = 'Ocorreu um erro interno no servidor de autenticação. Tente novamente mais tarde.';
+        } else {
+          // Use the actual error message if available
+          errorMessage = error.message || errorMessage;
+        }
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Erro ao fazer login com Google',
-        description: 'Ocorreu um erro ao fazer login com Google.'
+        description: errorMessage
       });
+      
+      // Display a UI element with the error message
+      const errorElement = document.getElementById('google-login-error');
+      if (errorElement) {
+        errorElement.textContent = errorMessage;
+        errorElement.style.display = 'block';
+      }
     }
   };
 
