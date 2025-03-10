@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -59,7 +60,7 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <NotificationProvider>
-              <Toaster position="top-right" richColors />
+              <Toaster />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />

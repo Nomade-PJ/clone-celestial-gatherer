@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
@@ -33,12 +34,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
+  // Load user from localStorage on mount
   useEffect(() => {
-    // Check for stored user data on component mount
-    const storedUser = localStorage.getItem('pauloCell_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const loadUserFromStorage = () => {
+      const storedUser = localStorage.getItem('pauloCell_user');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          console.log('User loaded from localStorage:', parsedUser);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('pauloCell_user');
+        }
+      }
+    };
+    
+    loadUserFromStorage();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -181,11 +193,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('pauloCell_user');
-    navigate('/login');
     toast({
       title: 'Logout realizado com sucesso!',
       description: 'Até logo!'
     });
+    navigate('/login');
   };
 
   return (
