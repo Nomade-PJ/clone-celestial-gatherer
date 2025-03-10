@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PhoneIcon, MailIcon, MoreVerticalIcon } from 'lucide-react';
+import { PhoneIcon, MailIcon, MoreVerticalIcon, TrashIcon } from 'lucide-react';
+import { moveCustomerToTrash } from '@/lib/trash-utils';
+import { toast } from 'sonner';
 
 interface CustomerCardProps {
   customer: {
@@ -13,9 +15,10 @@ interface CustomerCardProps {
     avatar?: string;
   };
   index: number;
+  onDelete?: () => void;
 }
 
-const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) => {
+const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index, onDelete }) => {
   // Format date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -27,6 +30,23 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) => {
     }
   };
 
+  const handleTrashClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click event
+    
+    try {
+      const success = moveCustomerToTrash(customer.id);
+      if (success) {
+        toast.success(`Cliente "${customer.name}" movido para a lixeira`);
+        if (onDelete) onDelete();
+      } else {
+        toast.error('Erro ao mover cliente para a lixeira');
+      }
+    } catch (error) {
+      console.error('Error moving customer to trash:', error);
+      toast.error('Erro ao mover cliente para a lixeira');
+    }
+  };
+  
   return (
     <motion.div 
       className="bg-card rounded-xl border border-border p-4 card-hover"
@@ -63,9 +83,18 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) => {
           </div>
         </div>
         
-        <button className="p-1 rounded-full hover:bg-muted transition-colors">
-          <MoreVerticalIcon size={18} />
-        </button>
+        <div className="flex gap-1">
+          <button 
+            className="p-1.5 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors" 
+            onClick={handleTrashClick}
+            title="Mover para a lixeira"
+          >
+            <TrashIcon size={16} />
+          </button>
+          <button className="p-1.5 rounded-full hover:bg-muted transition-colors">
+            <MoreVerticalIcon size={16} />
+          </button>
+        </div>
       </div>
       
       <div className="flex gap-3 mt-3 text-xs">

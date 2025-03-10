@@ -10,7 +10,8 @@ import {
   DownloadIcon,
   XIcon,
   RefreshCcwIcon,
-  UserIcon
+  UserIcon,
+  TrashIcon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import CustomerCard from '@/components/ui/CustomerCard';
@@ -125,6 +126,11 @@ const Customers: React.FC = () => {
     toast.success('Lista de clientes atualizada!');
   };
   
+  const handleCustomerDeleted = () => {
+    // Reload the customers list when a customer is deleted
+    loadCustomers();
+  };
+  
   return (
     <MainLayout>
       <motion.div 
@@ -139,6 +145,10 @@ const Customers: React.FC = () => {
             <p className="text-muted-foreground">Gerencie os clientes da sua loja</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => navigate('/trash-bin')}>
+              <TrashIcon size={16} />
+              <span className="hidden sm:inline">Lixeira</span>
+            </Button>
             <Button variant="outline" className="gap-2" onClick={handleRefresh}>
               <RefreshCcwIcon size={16} />
               <span className="hidden sm:inline">Atualizar</span>
@@ -236,7 +246,7 @@ const Customers: React.FC = () => {
           {filteredCustomers.length > 0 ? (
             filteredCustomers.map((customer, idx) => (
               <div key={customer.id} onClick={() => handleCustomerClick(customer.id)} className="cursor-pointer">
-                <CustomerCard customer={customer} index={idx} />
+                <CustomerCard customer={customer} index={idx} onDelete={handleCustomerDeleted} />
               </div>
             ))
           ) : (
