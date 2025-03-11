@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { exportToPDF } from '@/lib/export-utils';
 
 interface Document {
   id: string;
@@ -60,7 +61,6 @@ const DocumentDetail: React.FC = () => {
   const [customer, setCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
-    // Carregar dados do documento
     const savedDocuments = localStorage.getItem('pauloCell_documents');
     if (savedDocuments && id) {
       const documents = JSON.parse(savedDocuments);
@@ -68,7 +68,6 @@ const DocumentDetail: React.FC = () => {
       if (foundDocument) {
         setDocument(foundDocument);
 
-        // Carregar dados do cliente
         const savedCustomers = localStorage.getItem('pauloCell_customers');
         if (savedCustomers) {
           const customers = JSON.parse(savedCustomers);
@@ -86,20 +85,41 @@ const DocumentDetail: React.FC = () => {
   };
 
   const handleDownload = () => {
-    // Implementar download do documento
+    if (!document) return;
+    
+    try {
+      const documentData = [
+        {
+          Número: document.number,
+          Tipo: document.type === 'nfe' ? 'Nota Fiscal Eletrônica' : 
+                document.type === 'nfce' ? 'Nota Fiscal de Consumidor Eletrônica' : 
+                'Nota Fiscal de Serviço Eletrônica',
+          Cliente: customer?.name || document.customer,
+          Data: new Date(document.date).toLocaleDateString('pt-BR'),
+          Valor: document.value,
+          Status: document.status,
+          Forma_de_Pagamento: document.paymentMethod,
+          Observações: document.observations || 'Nenhuma observação'
+        }
+      ];
+      
+      exportToPDF(documentData, `Documento_${document.number}`);
+      toast.success('Documento exportado com sucesso como PDF');
+    } catch (error) {
+      console.error('Erro ao exportar documento:', error);
+      toast.error('Erro ao exportar documento');
+    }
   };
 
   const handleStatusChange = (newStatus: string) => {
     if (!document || !id) return;
     
     try {
-      // Get current documents
       const savedDocuments = localStorage.getItem('pauloCell_documents');
       if (!savedDocuments) return;
       
       const documents = JSON.parse(savedDocuments);
       
-      // Update document status
       const updatedDocuments = documents.map((doc: Document) => {
         if (doc.id === id) {
           return { ...doc, status: newStatus };
@@ -107,10 +127,8 @@ const DocumentDetail: React.FC = () => {
         return doc;
       });
       
-      // Save updated documents
       localStorage.setItem('pauloCell_documents', JSON.stringify(updatedDocuments));
       
-      // Update local state
       setDocument({ ...document, status: newStatus });
       toast.success(`Status alterado para ${newStatus}`);
     } catch (error) {
