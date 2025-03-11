@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { SmartphoneIcon, WrenchIcon, UsersIcon, ShieldCheckIcon } from 'lucide-react';
+import { SmartphoneIcon, WrenchIcon, UsersIcon, CodeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DeveloperContactModal from '@/components/layout/header/DeveloperContactModal';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [developerModalOpen, setDeveloperModalOpen] = useState(false);
+
+  const handleDeveloperContact = () => {
+    setDeveloperModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100">
@@ -83,7 +89,20 @@ const Index = () => {
 
       <div className="mt-16 text-center text-sm text-muted-foreground">
         <p>© {new Date().getFullYear()} PauloCell - Todos os direitos reservados</p>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleDeveloperContact}
+          className="mt-2 text-xs text-muted-foreground hover:text-primary"
+        >
+          Desenvolvido por
+        </Button>
       </div>
+
+      <DeveloperContactModal 
+        open={developerModalOpen} 
+        onOpenChange={setDeveloperModalOpen} 
+      />
     </div>
   );
 };
