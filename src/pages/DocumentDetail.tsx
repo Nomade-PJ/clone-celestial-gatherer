@@ -20,6 +20,14 @@ import {
   CalendarIcon,
   DollarSignIcon
 } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Document {
   id: string;
@@ -79,6 +87,36 @@ const DocumentDetail: React.FC = () => {
 
   const handleDownload = () => {
     // Implementar download do documento
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    if (!document || !id) return;
+    
+    try {
+      // Get current documents
+      const savedDocuments = localStorage.getItem('pauloCell_documents');
+      if (!savedDocuments) return;
+      
+      const documents = JSON.parse(savedDocuments);
+      
+      // Update document status
+      const updatedDocuments = documents.map((doc: Document) => {
+        if (doc.id === id) {
+          return { ...doc, status: newStatus };
+        }
+        return doc;
+      });
+      
+      // Save updated documents
+      localStorage.setItem('pauloCell_documents', JSON.stringify(updatedDocuments));
+      
+      // Update local state
+      setDocument({ ...document, status: newStatus });
+      toast.success(`Status alterado para ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating document status:', error);
+      toast.error('Erro ao atualizar status do documento');
+    }
   };
 
   if (!document || !customer) {
@@ -155,6 +193,26 @@ const DocumentDetail: React.FC = () => {
                     }).format(document.value)}
                   </p>
                 </div>
+                <div>
+                  <h3 className="font-medium flex items-center gap-2">
+                    Status
+                  </h3>
+                  <div className="mt-1">
+                    <Select 
+                      defaultValue={document.status} 
+                      onValueChange={handleStatusChange}
+                    >
+                      <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${document.status === 'Emitida' ? 'bg-green-100 text-green-800' : document.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        <SelectValue>{document.status}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Emitida">Emitida</SelectItem>
+                        <SelectItem value="Cancelada">Cancelada</SelectItem>
+                        <SelectItem value="Pendente">Pendente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -213,4 +271,4 @@ const DocumentDetail: React.FC = () => {
   );
 };
 
-export default DocumentDetail; 
+export default DocumentDetail;

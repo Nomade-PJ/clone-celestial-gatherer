@@ -37,10 +37,47 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    
+    // If the field is postalCode and has 8 digits (without mask) or 9 characters (with mask)
+    if (name === 'postalCode' && (value.replace(/\D/g, '').length === 8)) {
+      fetchAddressByCep(value);
+    }
+  };
+
+  const fetchAddressByCep = async (cep: string) => {
+    // Remove any non-digit character
+    const cepDigits = cep.replace(/\D/g, '');
+    
+    if (cepDigits.length !== 8) return;
+    
+    setIsLoadingCep(true);
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
+      const data = await response.json();
+      
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          address: data.logradouro || prev.address,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+        }));
+        toast.success('Endereço preenchido automaticamente');
+      } else {
+        toast.error('CEP não encontrado');
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+      toast.error('Erro ao buscar endereço pelo CEP');
+    } finally {
+      setIsLoadingCep(false);
+    }
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -174,18 +211,23 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             </p>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="address">Endereço</Label>
-            <Input
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="Rua, número, complemento"
-            />
-          </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">CEP</Label>
+              <Input
+                id="postalCode"
+                name="postalCode"
+                value={formData.postalCode}
+                onChange={handleChange}
+                placeholder="00000-000"
+                className={isLoadingCep ? "opacity-70" : ""}
+                disabled={isLoadingCep}
+              />
+              {isLoadingCep && (
+                <p className="text-xs text-muted-foreground mt-1">Buscando endereço...</p>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="city">Cidade</Label>
               <Input
@@ -207,17 +249,17 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 placeholder="Estado"
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="postalCode">CEP</Label>
-              <Input
-                id="postalCode"
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleChange}
-                placeholder="00000-000"
-              />
-            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="address">Endereço</Label>
+            <Input
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Rua, número, complemento"
+            />
           </div>
         </div>
         
@@ -250,7 +292,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || isLoadingCep}>
             {isSubmitting ? 'Salvando...' : isEdit ? 'Atualizar' : 'Cadastrar'}
           </Button>
         </div>

@@ -26,7 +26,8 @@ import {
   FilterIcon,
   FileIcon,
   FileCheckIcon,
-  FilePlusIcon
+  FilePlusIcon,
+  TrashIcon
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,6 +38,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from 'sonner';
+import { moveDocumentToTrash } from '@/lib/document-trash-utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Document {
   id: string;
@@ -61,6 +73,7 @@ const Documents: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadDocuments();
@@ -114,6 +127,57 @@ const Documents: React.FC = () => {
   const handleDownload = (doc: Document) => {
     // Implementar lógica de download
     toast.info('Funcionalidade de download em desenvolvimento');
+  };
+
+  const handleDelete = (documentId: string) => {
+    setDocumentToDelete(documentId);
+  };
+
+  const confirmDelete = () => {
+    if (!documentToDelete) return;
+    
+    try {
+      const success = moveDocumentToTrash(documentToDelete);
+      if (success) {
+        loadDocuments(); // Refresh the list
+        toast.success('Documento movido para a lixeira');
+      } else {
+        toast.error('Erro ao mover documento para a lixeira');
+      }
+    } catch (error) {
+      console.error('Error moving document to trash:', error);
+      toast.error('Erro ao mover documento para a lixeira');
+    } finally {
+      setDocumentToDelete(null); // Close the dialog
+    }
+  };
+
+  const handleStatusChange = (documentId: string, newStatus: string) => {
+    try {
+      // Get current documents
+      const savedDocuments = localStorage.getItem('pauloCell_documents');
+      if (!savedDocuments) return;
+      
+      const documents = JSON.parse(savedDocuments);
+      
+      // Update document status
+      const updatedDocuments = documents.map((doc: any) => {
+        if (doc.id === documentId) {
+          return { ...doc, status: newStatus };
+        }
+        return doc;
+      });
+      
+      // Save updated documents
+      localStorage.setItem('pauloCell_documents', JSON.stringify(updatedDocuments));
+      
+      // Update local state
+      setDocuments(updatedDocuments);
+      toast.success(`Status alterado para ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating document status:', error);
+      toast.error('Erro ao atualizar status do documento');
+    }
   };
 
   return (
@@ -228,14 +292,21 @@ const Documents: React.FC = () => {
                         currency: 'BRL'
                       }).format(doc.value)}
                     </TableCell>
-                    <TableCell onClick={() => navigate(`/documents/${doc.id}`)}>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        doc.status === 'Emitida' ? 'bg-green-100 text-green-800' :
-                        doc.status === 'Cancelada' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {doc.status}
-                      </span>
+                    <TableCell>
+                      <Select 
+                        defaultValue={doc.status} 
+                        onValueChange={(value) => handleStatusChange(doc.id, value)}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${doc.status === 'Emitida' ? 'bg-green-100 text-green-800' : doc.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          <SelectValue>{doc.status}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Emitida">Emitida</SelectItem>
+                          <SelectItem value="Cancelada">Cancelada</SelectItem>
+                          <SelectItem value="Pendente">Pendente</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -252,6 +323,16 @@ const Documents: React.FC = () => {
                           onClick={() => handleDownload(doc)}
                         >
                           <DownloadIcon className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(doc.id);
+                          }}
+                        >
+                          <TrashIcon className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -276,8 +357,25 @@ const Documents: React.FC = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      <AlertDialog open={!!documentToDelete} onOpenChange={(open) => !open && setDocumentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir documento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O documento será movido para a lixeira. Você poderá restaurá-lo posteriormente se necessário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
 
-export default Documents; 
+export default Documents;

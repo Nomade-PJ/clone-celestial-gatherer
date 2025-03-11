@@ -42,14 +42,6 @@ const NewService: React.FC = () => {
     notes: '',
   });
   
-  // Technicians data
-  const technicians = [
-    { id: '1', name: 'Carlos Oliveira' },
-    { id: '2', name: 'Ana Ferreira' },
-    { id: '3', name: 'Pedro Almeida' },
-    { id: '4', name: 'João Silva' },
-  ];
-  
   // Load data from localStorage
   useEffect(() => {
     const savedCustomers = localStorage.getItem('pauloCell_customers');
@@ -130,7 +122,6 @@ const NewService: React.FC = () => {
     // Get customer and device names
     const customer = customers.find(c => c.id === formData.customerId);
     const device = devices.find(d => d.id === formData.deviceId);
-    const technician = technicians.find(t => t.id === formData.technicianId);
     
     const serviceData = {
       id: uuidv4(),
@@ -146,7 +137,7 @@ const NewService: React.FC = () => {
       customerId: formData.customerId, // Explicitly add customerId for proper filtering
       device: device?.name || 'Dispositivo não encontrado',
       deviceId: formData.deviceId, // Explicitly add deviceId for proper filtering
-      technician: technician?.name || 'Não atribuído',
+      technician: formData.technicianId || 'Não atribuído',
       estimatedCompletion: formData.estimatedCompletion || undefined,
     };
     
@@ -249,19 +240,13 @@ const NewService: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="technician">Técnico</Label>
-                <Select
+                <Input
+                  id="technician"
+                  name="technicianId"
                   value={formData.technicianId}
-                  onValueChange={(value) => handleSelectChange('technicianId', value)}
-                >
-                  <SelectTrigger id="technician">
-                    <SelectValue placeholder="Selecione o técnico" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {technicians.map(tech => (
-                      <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={handleInputChange}
+                  placeholder="Nome do técnico responsável"
+                />
               </div>
               
               <div className="space-y-2">
