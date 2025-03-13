@@ -30,59 +30,87 @@ const formatDataForExport = (data: ExportableData[]) => {
 
 // Export as PDF
 export const exportToPDF = (data: ExportableData[], title: string) => {
-  const doc = new jsPDF();
-  const formattedData = formatDataForExport(data);
+  try {
+    if (!data || data.length === 0) {
+      throw new Error('No data to export');
+    }
 
-  // Add title
-  doc.setFontSize(16);
-  doc.text(title, 20, 20);
-  doc.setFontSize(12);
+    const doc = new jsPDF();
+    const formattedData = formatDataForExport(data);
 
-  // Add data
-  const headers = Object.keys(formattedData[0] || {});
-  const rows = formattedData.map(item => headers.map(header => item[header]));
+    // Add title
+    doc.setFontSize(16);
+    doc.text(title, 20, 20);
+    doc.setFontSize(12);
 
-  doc.autoTable({
-    head: [headers],
-    body: rows,
-    startY: 30,
-    margin: { top: 25 },
-    styles: { fontSize: 10 },
-    headStyles: { fillColor: [66, 139, 202] }
-  });
+    // Add data
+    const headers = Object.keys(formattedData[0] || {});
+    const rows = formattedData.map(item => headers.map(header => item[header]));
 
-  // Save the PDF
-  doc.save(`${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.autoTable({
+      head: [headers],
+      body: rows,
+      startY: 30,
+      margin: { top: 25 },
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [66, 139, 202] }
+    });
+
+    // Save the PDF
+    doc.save(`${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+  } catch (error) {
+    console.error('Error exporting to PDF:', error);
+    throw error;
+  }
 };
 
 // Export as Excel
 export const exportToExcel = (data: ExportableData[], title: string) => {
-  const formattedData = formatDataForExport(data);
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(formattedData);
+  try {
+    if (!data || data.length === 0) {
+      throw new Error('No data to export');
+    }
 
-  // Add the worksheet to the workbook
-  XLSX.utils.book_append_sheet(wb, ws, title);
+    const formattedData = formatDataForExport(data);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(formattedData);
 
-  // Generate Excel file and trigger download
-  XLSX.writeFile(wb, `${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, title);
+
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, `${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+    throw error;
+  }
 };
 
 // Export as CSV
 export const exportToCSV = (data: ExportableData[], title: string) => {
-  const formattedData = formatDataForExport(data);
-  const csv = Papa.unparse(formattedData);
-  
-  // Create blob and download
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  
-  link.setAttribute('href', url);
-  link.setAttribute('download', `${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-  link.style.visibility = 'hidden';
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    if (!data || data.length === 0) {
+      throw new Error('No data to export');
+    }
+
+    const formattedData = formatDataForExport(data);
+    const csv = Papa.unparse(formattedData);
+    
+    // Create blob and download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up the URL object
+  } catch (error) {
+    console.error('Error exporting to CSV:', error);
+    throw error;
+  }
 };

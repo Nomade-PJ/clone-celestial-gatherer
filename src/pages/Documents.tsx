@@ -37,6 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 import { moveDocumentToTrash } from '@/lib/document-trash-utils';
 import {
@@ -49,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { exportToPDF, exportToExcel, exportToCSV } from '@/lib/export-utils';
 
 interface Document {
   id: string;
@@ -90,21 +98,26 @@ const Documents: React.FC = () => {
     navigate('/documents/new', { state: { documentType: type } });
   };
 
-  const handleExport = () => {
+  const handleExport = (format: string) => {
     try {
       const filteredDocs = filterDocuments();
-      const exportData = JSON.stringify(filteredDocs, null, 2);
-      const blob = new Blob([exportData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'documentos.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Documentos exportados com sucesso!');
+      switch (format) {
+        case 'pdf':
+          exportToPDF(filteredDocs, 'Documentos_Fiscais');
+          break;
+        case 'excel':
+          exportToExcel(filteredDocs, 'Documentos_Fiscais');
+          break;
+        case 'csv':
+          exportToCSV(filteredDocs, 'Documentos_Fiscais');
+          break;
+        default:
+          toast.error('Formato de exportação não suportado');
+          return;
+      }
+      toast.success(`Documentos exportados em formato ${format.toUpperCase()}`);
     } catch (error) {
+      console.error('Error exporting documents:', error);
       toast.error('Erro ao exportar documentos');
     }
   };
@@ -119,14 +132,118 @@ const Documents: React.FC = () => {
     });
   };
 
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(['number', 'type', 'customer', 'date', 'value', 'status', 'paymentMethod']);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [documentToPrint, setDocumentToPrint] = useState<Document | null>(null);
+
   const handlePrint = (doc: Document) => {
-    // Implementar lógica de impressão
-    toast.info('Funcionalidade de impressão em desenvolvimento');
+    setDocumentToPrint(doc);
+    setShowPrintDialog(true);
+  };
+
+  const handlePrintConfirm = () => {
+    if (!documentToPrint) return;
+
+    try {
+      const printStyles = `
+        <style>
+          @media print {
+            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+            table { page-break-inside: auto; width: 100%; border-collapse: collapse; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .document-header { text-align: center; margin-bottom: 30px; }
+            .document-info { margin: 20px; }
+            .section-title { margin: 20px 0; }
+          }
+        </style>
+      `;
+
+      const getDocumentInfo = () => {
+        const info = [];
+        if (selectedColumns.includes('number')) info.push(`<p><strong>Número:</strong> ${documentToPrint.number}</p>`);
+        if (selectedColumns.includes('type')) info.push(`<p><strong>Tipo:</strong> ${documentToPrint.type.toUpperCase()}</p>`);
+        if (selectedColumns.includes('customer')) info.push(`<p><strong>Cliente:</strong> ${documentToPrint.customer}</p>`);
+        if (selectedColumns.includes('date')) info.push(`<p><strong>Data:</strong> ${new Date(documentToPrint.date).toLocaleDateString('pt-BR')}</p>`);
+        if (selectedColumns.includes('value')) info.push(`<p><strong>Valor:</strong> ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(documentToPrint.value)}</p>`);
+        if (selectedColumns.includes('status')) info.push(`<p><strong>Status:</strong> ${documentToPrint.status}</p>`);
+        if (selectedColumns.includes('paymentMethod')) info.push(`<p><strong>Forma de Pagamento:</strong> ${documentToPrint.paymentMethod}</p>`);
+        return info.join('');
+      };
+
+      const content = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Documento Fiscal</title>
+            ${printStyles}
+          </head>
+          <body>
+            <div class="document-header">
+              <h1>Documento Fiscal</h1>
+            </div>
+            <div class="document-info">
+              ${getDocumentInfo()}
+            </div>
+            ${selectedColumns.includes('items') ? `
+              <h2 class="section-title">Itens</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Quantidade</th>
+                    <th>Valor Unitário</th>
+                    <th>Valor Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${documentToPrint.items.map(item => `
+                    <tr>
+                      <td>${item.description}</td>
+                      <td>${item.quantity}</td>
+                      <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.unitValue)}</td>
+                      <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.quantity * item.unitValue)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : ''}
+          </body>
+        </html>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(content);
+        printWindow.document.close();
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.onafterprint = () => {
+            printWindow.close();
+            setShowPrintDialog(false);
+            setDocumentToPrint(null);
+          };
+        }, 250);
+      } else {
+        toast.error('Não foi possível abrir a janela de impressão');
+      }
+    } catch (error) {
+      console.error('Error printing document:', error);
+      toast.error('Erro ao imprimir documento');
+    }
   };
 
   const handleDownload = (doc: Document) => {
-    // Implementar lógica de download
-    toast.info('Funcionalidade de download em desenvolvimento');
+    try {
+      exportToPDF([doc], `Documento_${doc.number}`);
+      toast.success('Documento exportado com sucesso como PDF');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Erro ao baixar documento');
+    }
   };
 
   const handleDelete = (documentId: string) => {
@@ -182,6 +299,142 @@ const Documents: React.FC = () => {
 
   return (
     <MainLayout>
+      <AlertDialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Opções de Impressão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selecione as informações que deseja incluir na impressão:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('number')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'number']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'number'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Número</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('type')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'type']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'type'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Tipo</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('customer')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'customer']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'customer'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Cliente</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('date')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'date']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'date'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Data</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('value')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'value']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'value'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Valor</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('status')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'status']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'status'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Status</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('paymentMethod')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'paymentMethod']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'paymentMethod'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Forma de Pagamento</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes('items')}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, 'items']);
+                  } else {
+                    setSelectedColumns(selectedColumns.filter(col => col !== 'items'));
+                  }
+                }}
+                className="form-checkbox h-4 w-4"
+              />
+              <span>Itens</span>
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePrintConfirm}>Imprimir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -203,10 +456,30 @@ const Documents: React.FC = () => {
               <FilePlusIcon className="w-4 h-4 mr-2" />
               Emitir NFS-e
             </Button>
-            <Button onClick={handleExport}>
-              <DownloadIcon className="w-4 h-4 mr-2" />
-              Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <DownloadIcon size={16} />
+                  <span>Exportar</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                    <FileTextIcon className="mr-2 h-4 w-4" />
+                    <span>Exportar como PDF</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('excel')}>
+                    <FileIcon className="mr-2 h-4 w-4" />
+                    <span>Exportar como Excel</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    <FileIcon className="mr-2 h-4 w-4" />
+                    <span>Exportar como CSV</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
