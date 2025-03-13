@@ -37,13 +37,14 @@ const Settings: React.FC = () => {
   const [companyData, setCompanyData] = useState({
     name: 'Paulo Cell',
     phone: '(11) 98765-4321',
-    email: 'contato@paulocell.com.br',
-    address: 'Rua das Flores, 123',
-    city: 'São Paulo',
-    state: 'SP',
-    postalCode: '01234-567',
+    email: 'Paullo.celullar2020@gmail',
+    address: 'Rua Dr. Paulo Ramos, S/n, Bairro: Centro',
+    city: 'Coelho Neto',
+    state: 'MA',
+    postalCode: '65620-000',
     logo: '',
-    notes: 'Assistência técnica especializada em celulares, tablets e notebooks.',
+    cpfCnpj: '42.054.453/0001-40',
+    notes: 'Assistência técnica especializada em celulares android e Iphone',
   });
   
   // Notification settings state
@@ -189,6 +190,16 @@ const Settings: React.FC = () => {
                     id="phone"
                     name="phone"
                     value={companyData.phone}
+                    onChange={handleCompanyDataChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cpfCnpj">CNPJ</Label>
+                  <Input
+                    id="cpfCnpj"
+                    name="cpfCnpj"
+                    value={companyData.cpfCnpj}
                     onChange={handleCompanyDataChange}
                   />
                 </div>

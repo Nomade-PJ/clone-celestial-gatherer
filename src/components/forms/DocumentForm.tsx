@@ -80,14 +80,46 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
   const handleSubmit = async (data: DocumentFormData) => {
     setIsLoading(true);
     try {
-      // Simular processamento
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Get customer details for the API
+      const customerObj = customers.find(c => c.id === data.customer);
+      if (!customerObj) {
+        throw new Error('Cliente não encontrado');
+      }
       
+      // Validate customer data for invoice
+      if (!customerObj.document && !customerObj.cpfCnpj) {
+        throw new Error('CPF/CNPJ do cliente é obrigatório para emissão de documento fiscal');
+      }
+      
+      // Validate address if it's a NF-e
+      if (data.type === 'nfe' && (!customerObj.address || !customerObj.address.street)) {
+        throw new Error('Endereço completo do cliente é obrigatório para emissão de NF-e');
+      }
+      
+      // Validate items
+      if (!data.items || data.items.length === 0) {
+        throw new Error('Pelo menos um item é obrigatório');
+      }
+      
+      for (const item of data.items) {
+        if (!item.description || item.description.trim() === '') {
+          throw new Error('Descrição do item é obrigatória');
+        }
+        if (item.quantity <= 0) {
+          throw new Error('Quantidade do item deve ser maior que zero');
+        }
+        if (item.unitValue <= 0) {
+          throw new Error('Valor unitário do item deve ser maior que zero');
+        }
+      }
+      
+      // Create document object
       const newDocument = {
         id: uuidv4(),
         type: data.type,
         number: `${type.toUpperCase()}-${Math.floor(Math.random() * 100000)}`,
-        customer: data.customer,
+        customer: customerObj.name,
+        customerId: data.customer,
         date: new Date().toISOString(),
         value: data.items.reduce((acc, item) => acc + (item.quantity * item.unitValue), 0),
         status: 'Emitida',
@@ -100,17 +132,45 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
         aliquotaIss: data.aliquotaIss,
       };
 
+      // Import the invoice API service
+      const { issueInvoice, convertDocumentToApiFormat } = await import('@/lib/invoice-api');
+      
+      // Convert document to API format and issue invoice
+      const apiData = convertDocumentToApiFormat(newDocument, customerObj);
+      
+      // Show processing message
+      toast.info('Processando emissão do documento fiscal...');
+      
+      const invoiceResponse = await issueInvoice(apiData);
+      
+      if (!invoiceResponse.success) {
+        throw new Error(invoiceResponse.error || 'Erro ao emitir documento fiscal');
+      }
+      
+      // Add API response data to the document
+      const documentWithApiData = {
+        ...newDocument,
+        invoiceId: invoiceResponse.invoiceId,
+        invoiceNumber: invoiceResponse.invoiceNumber,
+        invoiceKey: invoiceResponse.invoiceKey,
+        invoiceUrl: invoiceResponse.invoiceUrl,
+      };
+
       // Salvar no localStorage
       const savedDocs = localStorage.getItem('pauloCell_documents') || '[]';
       const documents = JSON.parse(savedDocs);
-      documents.push(newDocument);
+      documents.push(documentWithApiData);
       localStorage.setItem('pauloCell_documents', JSON.stringify(documents));
 
       toast.success('Documento fiscal emitido com sucesso!');
+      if (invoiceResponse.message) {
+        toast.info(invoiceResponse.message);
+      }
       onSubmit(data);
     } catch (error) {
-      toast.error('Erro ao emitir documento fiscal');
-      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao emitir documento fiscal';
+      toast.error(errorMessage);
+      console.error('Error issuing invoice:', error);
     } finally {
       setIsLoading(false);
     }
@@ -397,4 +457,4 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
   );
 };
 
-export default DocumentForm; 
+export default DocumentForm;

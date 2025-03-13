@@ -126,9 +126,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const savedDocuments = localStorage.getItem('pauloCell_documents');
       if (savedDocuments) {
         const documents = JSON.parse(savedDocuments);
-        const pendingDocuments = documents.filter((doc: any) => doc.status === 'Pendente');
         
-        // Only notify about pending documents that don't already have notifications
+        // Check for pending documents
+        const pendingDocuments = documents.filter((doc: any) => doc.status === 'Pendente');
         pendingDocuments.forEach((document: any) => {
           const existingNotification = notifications.find(
             (n) => n.title.includes('Documento Pendente') && n.message.includes(document.number)
@@ -139,6 +139,45 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               title: 'Documento Pendente',
               message: `O documento ${document.type.toUpperCase()} ${document.number} está pendente`,
               type: 'info',
+              link: `/documents/${document.id}`,
+            });
+          }
+        });
+        
+        // Check for documents with invoice information from API
+        const documentsWithInvoice = documents.filter((doc: any) => doc.invoiceId && doc.status === 'Emitida');
+        documentsWithInvoice.forEach((document: any) => {
+          const existingNotification = notifications.find(
+            (n) => n.title.includes('Documento Fiscal Emitido') && n.message.includes(document.number)
+          );
+          
+          if (!existingNotification) {
+            addNotification({
+              title: 'Documento Fiscal Emitido',
+              message: `O documento ${document.type.toUpperCase()} ${document.number} foi emitido com sucesso`,
+              type: 'success',
+              link: `/documents/${document.id}`,
+            });
+          }
+        });
+        
+        // Check for canceled documents
+        const canceledDocuments = documents.filter((doc: any) => 
+          doc.status === 'Cancelada' && doc.invoiceId && 
+          // Only notify about recently canceled documents (last 24 hours)
+          new Date(doc.updatedAt || doc.date).getTime() > Date.now() - 24 * 60 * 60 * 1000
+        );
+        
+        canceledDocuments.forEach((document: any) => {
+          const existingNotification = notifications.find(
+            (n) => n.title.includes('Documento Fiscal Cancelado') && n.message.includes(document.number)
+          );
+          
+          if (!existingNotification) {
+            addNotification({
+              title: 'Documento Fiscal Cancelado',
+              message: `O documento ${document.type.toUpperCase()} ${document.number} foi cancelado`,
+              type: 'warning',
               link: `/documents/${document.id}`,
             });
           }

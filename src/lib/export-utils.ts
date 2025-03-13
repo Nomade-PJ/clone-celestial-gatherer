@@ -1,6 +1,6 @@
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// Import autotable dynamically to ensure compatibility with jsPDF v3
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -41,18 +41,21 @@ export const exportToPDF = (data: ExportableData[], title: string) => {
     const headers = Object.keys(formattedData[0] || {});
     const rows = formattedData.map(item => headers.map(header => item[header]));
 
-    // Using autoTable with proper type handling
-    (doc as any).autoTable({
-      head: [headers],
-      body: rows,
-      startY: 30,
-      margin: { top: 25 },
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [66, 139, 202] }
-    });
+    // Using autoTable with proper import for jsPDF v3
+    import('jspdf-autotable').then((autoTable) => {
+      autoTable.default(doc, {
+        head: [headers],
+        body: rows,
+        startY: 30,
+        margin: { top: 25 },
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [66, 139, 202] }
+      });
 
-    // Save the PDF
-    doc.save(`${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+      // Save the PDF after table is created
+      doc.save(`${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    });
+    
     return true;
   } catch (error) {
     console.error('Error exporting to PDF:', error);
@@ -128,30 +131,47 @@ export const exportDocumentToPDF = (document: ExportableData, selectedColumns: s
         new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(item.quantity * item.unitValue)
       ]);
       
-      (doc as any).autoTable({
-        head: [itemHeaders],
-        body: itemRows,
-        startY: yPosition,
-        margin: { top: 25 },
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [66, 139, 202] }
+      // Use the autoTable plugin with proper type handling for jsPDF v3
+      import('jspdf-autotable').then((autoTable) => {
+        autoTable.default(doc, {
+          head: [itemHeaders],
+          body: itemRows,
+          startY: yPosition,
+          margin: { top: 25 },
+          styles: { fontSize: 10 },
+          headStyles: { fillColor: [66, 139, 202] }
+        });
+        
+        // Handle observations after table is created
+        if (selectedColumns.includes('observations') && document.observations) {
+          const tableHeight = document.items && document.items.length > 0 ? 
+            document.items.length * 10 + 15 : 0;
+          let obsYPosition = yPosition + tableHeight + 10;
+          
+          doc.text("Observações:", 20, obsYPosition);
+          obsYPosition += 10;
+          doc.text(document.observations, 20, obsYPosition, { 
+            maxWidth: 170 
+          });
+        }
+        
+        // Save the PDF after all content is added
+        doc.save(`documento_${document.number}_${new Date().toISOString().split('T')[0]}.pdf`);
       });
-    }
-    
-    if (selectedColumns.includes('observations') && document.observations) {
-      const tableHeight = document.items && document.items.length > 0 ? 
-        document.items.length * 10 + 15 : 0;
-      yPosition += tableHeight + 10;
+    } else {
+      // If no items, handle observations and save directly
+      if (selectedColumns.includes('observations') && document.observations) {
+        doc.text("Observações:", 20, yPosition);
+        yPosition += 10;
+        doc.text(document.observations, 20, yPosition, { 
+          maxWidth: 170 
+        });
+      }
       
-      doc.text("Observações:", 20, yPosition);
-      yPosition += 10;
-      doc.text(document.observations, 20, yPosition, { 
-        maxWidth: 170 
-      });
+      // Save the PDF
+      doc.save(`documento_${document.number}_${new Date().toISOString().split('T')[0]}.pdf`);
     }
     
-    // Save the PDF
-    doc.save(`documento_${document.number}_${new Date().toISOString().split('T')[0]}.pdf`);
     return true;
   } catch (error) {
     console.error('Error exporting document to PDF:', error);

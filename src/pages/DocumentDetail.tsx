@@ -58,6 +58,11 @@ interface Document {
   items: DocumentItem[];
   paymentMethod: string;
   observations?: string;
+  // API response fields
+  invoiceId?: string;
+  invoiceNumber?: string;
+  invoiceKey?: string;
+  invoiceUrl?: string;
 }
 
 const DocumentDetail = () => {
@@ -98,10 +103,35 @@ const DocumentDetail = () => {
     loadDocument();
   }, [id, navigate]);
 
-  const handleStatusChange = (newStatus: DocumentStatus) => {
+  const handleStatusChange = async (newStatus: DocumentStatus) => {
     if (!document) return;
 
     try {
+      // If changing to 'Cancelada' and we have an invoiceId, call the API to cancel the invoice
+      if (newStatus === 'Cancelada' && document.invoiceId) {
+        setLoading(true);
+        toast.info('Processando cancelamento do documento fiscal...');
+        
+        // Import the invoice API service
+        const { cancelInvoice } = await import('@/lib/invoice-api');
+        
+        // Call the API to cancel the invoice
+        const cancelResponse = await cancelInvoice(
+          document.invoiceId,
+          'Cancelamento solicitado pelo usuário'
+        );
+        
+        if (!cancelResponse.success) {
+          throw new Error(cancelResponse.error || 'Erro ao cancelar documento fiscal');
+        }
+        
+        toast.success('Documento fiscal cancelado com sucesso no provedor');
+        if (cancelResponse.message) {
+          toast.info(cancelResponse.message);
+        }
+      }
+      
+      // Update the document status in localStorage
       const savedDocuments = localStorage.getItem('pauloCell_documents');
       if (!savedDocuments) return;
       
@@ -120,7 +150,10 @@ const DocumentDetail = () => {
       toast.success(`Status alterado para ${newStatus}`);
     } catch (error) {
       console.error('Error updating document status:', error);
-      toast.error('Erro ao atualizar status do documento');
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar status do documento';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,6 +173,14 @@ const DocumentDetail = () => {
     if (!document) return;
     
     try {
+      // If we have an invoice URL from the API, open it in a new tab
+      if (document.invoiceUrl) {
+        window.open(document.invoiceUrl, '_blank');
+        toast.success('Abrindo documento fiscal no site do provedor');
+        return;
+      }
+      
+      // Otherwise, use the local PDF export
       const success = exportDocumentToPDF(document, [
         'number', 'type', 'customer', 'date', 'value', 'status', 
         'paymentMethod', 'items', 'observations'
@@ -283,6 +324,41 @@ const DocumentDetail = () => {
                     </Select>
                   </div>
                 </div>
+                {document.invoiceNumber && (
+                  <div>
+                    <h3 className="font-medium flex items-center gap-2">
+                      Número da Nota
+                    </h3>
+                    <p className="text-muted-foreground">{document.invoiceNumber}</p>
+                  </div>
+                )}
+                {document.invoiceKey && (
+                  <div>
+                    <h3 className="font-medium flex items-center gap-2">
+                      Chave de Acesso
+                    </h3>
+                    <p className="text-muted-foreground text-xs truncate" title={document.invoiceKey}>
+                      {document.invoiceKey}
+                    </p>
+                  </div>
+                )}
+                {document.invoiceUrl && (
+                  <div>
+                    <h3 className="font-medium flex items-center gap-2">
+                      Link da Nota
+                    </h3>
+                    <p className="text-muted-foreground">
+                      <a 
+                        href={document.invoiceUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Visualizar
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
