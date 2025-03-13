@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -25,7 +26,15 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon, PrinterIcon, DownloadIcon } from 'lucide-react';
+import { 
+  ArrowLeftIcon, 
+  PrinterIcon, 
+  DownloadIcon, 
+  FileTextIcon, 
+  CalendarIcon, 
+  UserIcon, 
+  DollarSignIcon 
+} from 'lucide-react';
 import { exportDocumentToPDF } from '@/lib/export-utils';
 
 type DocumentStatus = 'Emitida' | 'Cancelada' | 'Pendente';
@@ -261,7 +270,7 @@ const DocumentDetail = () => {
                   <div className="mt-1">
                     <Select 
                       defaultValue={document.status} 
-                      onValueChange={handleStatusChange}
+                      onValueChange={(value) => handleStatusChange(value as DocumentStatus)}
                     >
                       <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${getStatusColor(document.status)}`}>
                         <SelectValue>{document.status}</SelectValue>
