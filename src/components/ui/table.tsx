@@ -1,12 +1,31 @@
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableElement> & {
+    exportable?: boolean;
+    onExport?: () => void;
+  }
+>(({ className, exportable, onExport, ...props }, ref) => (
   <div className="relative w-full overflow-auto">
+    {exportable && (
+      <div className="flex justify-end mb-2">
+        <button 
+          onClick={onExport}
+          className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 flex items-center gap-1"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export
+        </button>
+      </div>
+    )}
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
