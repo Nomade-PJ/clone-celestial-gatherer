@@ -269,7 +269,7 @@ const Documents: React.FC = () => {
     }
   };
 
-  const handleStatusChange = (documentId: string, newStatus: string) => {
+  const handleStatusChange = (documentId: string, newStatus: 'Emitida' | 'Cancelada' | 'Pendente') => {
     try {
       // Get current documents
       const savedDocuments = localStorage.getItem('pauloCell_documents');
@@ -566,20 +566,21 @@ const Documents: React.FC = () => {
                       }).format(doc.value)}
                     </TableCell>
                     <TableCell>
-                      <Select 
-                        defaultValue={doc.status} 
-                        onValueChange={(value) => handleStatusChange(doc.id, value)}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${doc.status === 'Emitida' ? 'bg-green-100 text-green-800' : doc.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                          <SelectValue>{doc.status}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Emitida">Emitida</SelectItem>
-                          <SelectItem value="Cancelada">Cancelada</SelectItem>
-                          <SelectItem value="Pendente">Pendente</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Select 
+                          defaultValue={doc.status} 
+                          onValueChange={(value: 'Emitida' | 'Cancelada' | 'Pendente') => handleStatusChange(doc.id, value)}
+                        >
+                          <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${doc.status === 'Emitida' ? 'bg-green-100 text-green-800' : doc.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            <SelectValue>{doc.status}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Emitida">Emitida</SelectItem>
+                            <SelectItem value="Cancelada">Cancelada</SelectItem>
+                            <SelectItem value="Pendente">Pendente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -12,23 +17,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  FileTextIcon,
-  PrinterIcon,
-  DownloadIcon,
-  ArrowLeftIcon,
-  UserIcon,
-  CalendarIcon,
-  DollarSignIcon
-} from 'lucide-react';
-import { toast } from 'sonner';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { exportToPDF } from '@/lib/export-utils';
+import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { ArrowLeftIcon, PrinterIcon, DownloadIcon } from 'lucide-react';
+import { exportDocumentToPDF } from '@/lib/export-utils';
+
+type DocumentStatus = 'Emitida' | 'Cancelada' | 'Pendente';
+
+interface DocumentItem {
+  description: string;
+  quantity: number;
+  unitValue: number;
+  ncm?: string;
+  cfop?: string;
+}
 
 interface Document {
   id: string;
@@ -37,83 +45,53 @@ interface Document {
   customer: string;
   date: string;
   value: number;
-  status: 'Emitida' | 'Cancelada' | 'Pendente';
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitValue: number;
-  }>;
+  status: DocumentStatus;
+  items: DocumentItem[];
   paymentMethod: string;
   observations?: string;
 }
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-const DocumentDetail: React.FC = () => {
+const DocumentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [document, setDocument] = useState<Document | null>(null);
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedDocuments = localStorage.getItem('pauloCell_documents');
-    if (savedDocuments && id) {
-      const documents = JSON.parse(savedDocuments);
-      const foundDocument = documents.find((d: Document) => d.id === id);
-      if (foundDocument) {
-        setDocument(foundDocument);
-
-        const savedCustomers = localStorage.getItem('pauloCell_customers');
-        if (savedCustomers) {
-          const customers = JSON.parse(savedCustomers);
-          const foundCustomer = customers.find((c: Customer) => c.id === foundDocument.customer);
-          if (foundCustomer) {
-            setCustomer(foundCustomer);
-          }
+    const loadDocument = () => {
+      try {
+        const savedDocuments = localStorage.getItem('pauloCell_documents');
+        if (!savedDocuments) {
+          toast.error('Nenhum documento encontrado');
+          navigate('/documents');
+          return;
         }
+
+        const documents = JSON.parse(savedDocuments);
+        const doc = documents.find((d: Document) => d.id === id);
+
+        if (!doc) {
+          toast.error('Documento não encontrado');
+          navigate('/documents');
+          return;
+        }
+
+        setDocument(doc);
+      } catch (error) {
+        console.error('Error loading document:', error);
+        toast.error('Erro ao carregar documento');
+        navigate('/documents');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [id]);
+    };
 
-  const handlePrint = () => {
-    window.print();
-  };
+    loadDocument();
+  }, [id, navigate]);
 
-  const handleDownload = () => {
+  const handleStatusChange = (newStatus: DocumentStatus) => {
     if (!document) return;
-    
-    try {
-      const documentData = [
-        {
-          Número: document.number,
-          Tipo: document.type === 'nfe' ? 'Nota Fiscal Eletrônica' : 
-                document.type === 'nfce' ? 'Nota Fiscal de Consumidor Eletrônica' : 
-                'Nota Fiscal de Serviço Eletrônica',
-          Cliente: customer?.name || document.customer,
-          Data: new Date(document.date).toLocaleDateString('pt-BR'),
-          Valor: document.value,
-          Status: document.status,
-          Forma_de_Pagamento: document.paymentMethod,
-          Observações: document.observations || 'Nenhuma observação'
-        }
-      ];
-      
-      exportToPDF(documentData, `Documento_${document.number}`);
-      toast.success('Documento exportado com sucesso como PDF');
-    } catch (error) {
-      console.error('Erro ao exportar documento:', error);
-      toast.error('Erro ao exportar documento');
-    }
-  };
 
-  const handleStatusChange = (newStatus: string) => {
-    if (!document || !id) return;
-    
     try {
       const savedDocuments = localStorage.getItem('pauloCell_documents');
       if (!savedDocuments) return;
@@ -121,7 +99,7 @@ const DocumentDetail: React.FC = () => {
       const documents = JSON.parse(savedDocuments);
       
       const updatedDocuments = documents.map((doc: Document) => {
-        if (doc.id === id) {
+        if (doc.id === document.id) {
           return { ...doc, status: newStatus };
         }
         return doc;
@@ -137,11 +115,79 @@ const DocumentDetail: React.FC = () => {
     }
   };
 
-  if (!document || !customer) {
+  const handlePrint = () => {
+    if (!document) return;
+    
+    try {
+      window.print();
+      toast.success('Documento enviado para impressão');
+    } catch (error) {
+      console.error('Error printing document:', error);
+      toast.error('Erro ao imprimir documento');
+    }
+  };
+
+  const handleDownload = () => {
+    if (!document) return;
+    
+    try {
+      const success = exportDocumentToPDF(document, [
+        'number', 'type', 'customer', 'date', 'value', 'status', 
+        'paymentMethod', 'items', 'observations'
+      ]);
+      
+      if (success) {
+        toast.success('Documento exportado com sucesso');
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Erro ao baixar documento');
+    }
+  };
+
+  const getFormattedDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const getFormattedValue = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getStatusColor = (status: DocumentStatus) => {
+    switch(status) {
+      case 'Emitida':
+        return 'bg-green-100 text-green-800';
+      case 'Cancelada':
+        return 'bg-red-100 text-red-800';
+      case 'Pendente':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto p-6 flex justify-center items-center h-[80vh]">
+          <p>Carregando...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!document) {
     return (
       <MainLayout>
         <div className="container mx-auto p-6">
           <p>Documento não encontrado</p>
+          <Button onClick={() => navigate('/documents')} variant="outline" className="mt-4">
+            Voltar para Documentos
+          </Button>
         </div>
       </MainLayout>
     );
@@ -189,7 +235,7 @@ const DocumentDetail: React.FC = () => {
                     Data
                   </h3>
                   <p className="text-muted-foreground">
-                    {new Date(document.date).toLocaleDateString('pt-BR')}
+                    {getFormattedDate(document.date)}
                   </p>
                 </div>
                 <div>
@@ -197,7 +243,7 @@ const DocumentDetail: React.FC = () => {
                     <UserIcon className="w-4 h-4" />
                     Cliente
                   </h3>
-                  <p className="text-muted-foreground">{customer.name}</p>
+                  <p className="text-muted-foreground">{document.customer}</p>
                 </div>
                 <div>
                   <h3 className="font-medium flex items-center gap-2">
@@ -205,10 +251,7 @@ const DocumentDetail: React.FC = () => {
                     Valor Total
                   </h3>
                   <p className="text-muted-foreground">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(document.value)}
+                    {getFormattedValue(document.value)}
                   </p>
                 </div>
                 <div>
@@ -220,7 +263,7 @@ const DocumentDetail: React.FC = () => {
                       defaultValue={document.status} 
                       onValueChange={handleStatusChange}
                     >
-                      <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${document.status === 'Emitida' ? 'bg-green-100 text-green-800' : document.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      <SelectTrigger className={`w-[110px] h-7 px-2 py-0 text-xs font-medium ${getStatusColor(document.status)}`}>
                         <SelectValue>{document.status}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>

@@ -1,16 +1,8 @@
 
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { jsPDF as JsPDFType } from 'jspdf';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-
-// Extending the jsPDF type to include autoTable method
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 
 interface ExportableData {
   [key: string]: any;
@@ -36,7 +28,8 @@ export const exportToPDF = (data: ExportableData[], title: string) => {
       throw new Error('No data to export');
     }
 
-    const doc = new jsPDF() as JsPDFType & { autoTable: Function };
+    // Create a new jsPDF instance
+    const doc = new jsPDF();
     const formattedData = formatDataForExport(data);
 
     // Add title
@@ -48,7 +41,8 @@ export const exportToPDF = (data: ExportableData[], title: string) => {
     const headers = Object.keys(formattedData[0] || {});
     const rows = formattedData.map(item => headers.map(header => item[header]));
 
-    doc.autoTable({
+    // Using autoTable with proper type handling
+    (doc as any).autoTable({
       head: [headers],
       body: rows,
       startY: 30,
@@ -73,7 +67,8 @@ export const exportDocumentToPDF = (document: ExportableData, selectedColumns: s
       throw new Error('No document to export');
     }
 
-    const doc = new jsPDF() as JsPDFType & { autoTable: Function };
+    // Create a new jsPDF instance
+    const doc = new jsPDF();
     
     // Add title
     doc.setFontSize(16);
@@ -133,7 +128,7 @@ export const exportDocumentToPDF = (document: ExportableData, selectedColumns: s
         new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(item.quantity * item.unitValue)
       ]);
       
-      doc.autoTable({
+      (doc as any).autoTable({
         head: [itemHeaders],
         body: itemRows,
         startY: yPosition,
