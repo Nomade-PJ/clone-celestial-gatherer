@@ -80,6 +80,9 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
   const handleSubmit = async (data: DocumentFormData) => {
     setIsLoading(true);
     try {
+      // Show initial processing message
+      toast.info('Preparando documento fiscal...');
+
       // Get customer details for the API
       const customerObj = customers.find(c => c.id === data.customer);
       if (!customerObj) {
@@ -92,8 +95,30 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
       }
       
       // Validate address if it's a NF-e
-      if (data.type === 'nfe' && (!customerObj.address || !customerObj.address.street)) {
-        throw new Error('Endereço completo do cliente é obrigatório para emissão de NF-e');
+      if (data.type === 'nfe') {
+        if (!customerObj.address) {
+          throw new Error('Endereço do cliente é obrigatório para emissão de NF-e');
+        }
+        
+        // Check for all required address fields
+        const requiredFields = ['street', 'number', 'neighborhood', 'city', 'state', 'postalCode'];
+        const missingFields = requiredFields.filter(
+          field => !customerObj.address[field] || customerObj.address[field].trim() === ''
+        );
+        
+        if (missingFields.length > 0) {
+          const fieldNames = {
+            street: 'Rua/Logradouro',
+            number: 'Número',
+            neighborhood: 'Bairro',
+            city: 'Cidade',
+            state: 'Estado',
+            postalCode: 'CEP'
+          };
+          
+          const missingFieldNames = missingFields.map(field => fieldNames[field] || field);
+          throw new Error(`Os seguintes campos de endereço são obrigatórios para NF-e: ${missingFieldNames.join(', ')}`);
+        }
       }
       
       // Validate items

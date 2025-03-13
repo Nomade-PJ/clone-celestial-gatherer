@@ -7,7 +7,6 @@ import {
   PlusIcon, 
   FilterIcon,
   ChevronDownIcon,
-  DownloadIcon,
   CheckCircleIcon,
   AlertCircleIcon,
   XCircleIcon,
@@ -29,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { exportToPDF, exportToExcel, exportToCSV } from "@/lib/export-utils";
 
 // Empty initial data - ready for new entries
 const initialDevices: any[] = [];
@@ -105,34 +103,7 @@ const Devices: React.FC = () => {
     navigate(`/devices/${id}`);
   };
   
-  const exportDevices = (format: string) => {
-    try {
-      // Get the filtered devices to export
-      const dataToExport = filteredDevices;
-      
-      // Use the appropriate export function based on format
-      switch (format.toLowerCase()) {
-        case 'pdf':
-          exportToPDF(dataToExport, 'Dispositivos');
-          break;
-        case 'excel':
-          exportToExcel(dataToExport, 'Dispositivos');
-          break;
-        case 'csv':
-          exportToCSV(dataToExport, 'Dispositivos');
-          break;
-        default:
-          toast.error('Formato de exportação não suportado');
-          return;
-      }
-      
-      toast.success(`Dispositivos exportados em formato ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error('Error exporting devices:', error);
-      toast.error('Erro ao exportar dispositivos');
-    }
-  };
-  
+
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(status);
   };
@@ -193,30 +164,7 @@ const Devices: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <DownloadIcon size={16} />
-                  <span className="hidden sm:inline">Exportar</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => exportDevices('pdf')}>
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    <span>Exportar como PDF</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportDevices('excel')}>
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    <span>Exportar como Excel</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportDevices('csv')}>
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    <span>Exportar como CSV</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
           </div>
         </div>
         

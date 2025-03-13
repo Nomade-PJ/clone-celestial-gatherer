@@ -11,7 +11,6 @@ import {
   ActivityIcon,
   CheckCircleIcon,
   PackageIcon,
-  DownloadIcon,
   XIcon,
   CalendarIcon,
   TagIcon,
@@ -108,33 +107,7 @@ const Services: React.FC = () => {
     navigate(`/services/${id}`);
   };
   
-  const exportServices = (format: string) => {
-    try {
-      // Get the filtered services to export
-      const dataToExport = filteredServices;
-      
-      // Use the appropriate export function based on format
-      switch (format.toLowerCase()) {
-        case 'pdf':
-          exportToPDF(dataToExport, 'Serviços');
-          break;
-        case 'excel':
-          exportToExcel(dataToExport, 'Serviços');
-          break;
-        case 'csv':
-          exportToCSV(dataToExport, 'Serviços');
-          break;
-        default:
-          toast.error('Formato de exportação não suportado');
-          return;
-      }
-      
-      toast.success(`Serviços exportados em formato ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error('Error exporting services:', error);
-      toast.error('Erro ao exportar serviços');
-    }
-  };
+  // Removed exportServices function
   
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(status);
@@ -191,30 +164,7 @@ const Services: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <DownloadIcon size={16} />
-                  <span className="hidden sm:inline">Exportar</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => exportServices('pdf')}>
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    <span>Exportar como PDF</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportServices('excel')}>
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    <span>Exportar como Excel</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportServices('csv')}>
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    <span>Exportar como CSV</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Removed Export dropdown menu */}
           </div>
         </div>
         

@@ -84,7 +84,7 @@ const Register: React.FC = () => {
         className="w-full max-w-md"
       >
         <div className="mb-8 flex justify-center">
-          <img src="/logo.svg" alt="Paulo Cell Logo" className="h-16" />
+          <img src="/logo.svg" alt="Paulo Cell Sistema PDV Logo" className="h-16" />
         </div>
 
         <Card>

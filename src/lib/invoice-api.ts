@@ -125,15 +125,29 @@ const validateInvoiceData = (data: InvoiceData): { valid: boolean; errors: strin
       errors.push('Nome do cliente é obrigatório');
     }
     
-    // Validate address if provided
-    if (data.customer.address) {
-      const requiredAddressFields = ['street', 'number', 'neighborhood', 'city', 'state', 'zipCode'];
-      const missingFields = requiredAddressFields.filter(
-        field => !data.customer.address?.[field as keyof typeof data.customer.address]
-      );
-      
-      if (missingFields.length > 0) {
-        errors.push(`Campos obrigatórios do endereço ausentes: ${missingFields.join(', ')}`);
+    // Validate address (required for NF-e)
+    if (data.type === 'nfe') {
+      if (!data.customer.address) {
+        errors.push('Endereço completo é obrigatório para emissão de NF-e');
+      } else {
+        const requiredAddressFields = ['street', 'number', 'neighborhood', 'city', 'state', 'zipCode'];
+        const missingFields = requiredAddressFields.filter(
+          field => !data.customer.address?.[field as keyof typeof data.customer.address] || 
+                  data.customer.address[field as keyof typeof data.customer.address].trim() === ''
+        );
+        
+        if (missingFields.length > 0) {
+          const fieldNames = {
+            street: 'Rua/Logradouro',
+            number: 'Número',
+            neighborhood: 'Bairro',
+            city: 'Cidade',
+            state: 'Estado',
+            zipCode: 'CEP'
+          };
+          const missingFieldNames = missingFields.map(field => fieldNames[field as keyof typeof fieldNames] || field);
+          errors.push(`Os seguintes campos de endereço são obrigatórios para NF-e: ${missingFieldNames.join(', ')}`);
+        }
       }
       
       // Validate zipCode format
@@ -189,22 +203,25 @@ const validateInvoiceData = (data: InvoiceData): { valid: boolean; errors: strin
  */
 export const issueInvoice = async (data: InvoiceData): Promise<InvoiceResponse> => {
   try {
-    // Validate API configuration
+    // Check API configuration
     if (!apiConfig.apiKey) {
       return {
         success: false,
-        error: 'Chave de API não configurada. Configure a API de notas fiscais primeiro.'
+        error: 'Chave da API não configurada. Por favor, configure a API nas configurações.'
       };
     }
-    
+
     // Validate invoice data
     const validation = validateInvoiceData(data);
     if (!validation.valid) {
       return {
         success: false,
-        error: `Dados inválidos: ${validation.errors.join('; ')}`
+        error: validation.errors.join('\n')
       };
     }
+
+    // Add delay for better user experience
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     console.log('Emitindo nota fiscal com dados:', data);
     
@@ -630,6 +647,21 @@ const formatDataForNfseApi = (data: InvoiceData): any => {
  * Convert the application's document data to the format expected by the API
  */
 export const convertDocumentToApiFormat = (document: any, customer: any): InvoiceData => {
+  // Create a properly formatted address object if address exists
+  let addressObj = undefined;
+  
+  if (customer.address) {
+    addressObj = {
+      street: customer.address.street || customer.address || '',
+      number: customer.address.number || '',
+      complement: customer.address.complement || '',
+      neighborhood: customer.address.neighborhood || '',
+      city: customer.city || '',
+      state: customer.state || '',
+      zipCode: customer.postalCode || ''
+    };
+  }
+  
   return {
     type: document.type,
     customer: {
@@ -637,15 +669,7 @@ export const convertDocumentToApiFormat = (document: any, customer: any): Invoic
       name: customer.name,
       document: customer.document || customer.cpfCnpj || '',
       email: customer.email,
-      address: customer.address ? {
-        street: customer.address.street || '',
-        number: customer.address.number || '',
-        complement: customer.address.complement,
-        neighborhood: customer.address.neighborhood || '',
-        city: customer.address.city || '',
-        state: customer.address.state || '',
-        zipCode: customer.address.zipCode || '',
-      } : undefined,
+      address: addressObj
     },
     items: document.items.map((item: any) => ({
       description: item.description,

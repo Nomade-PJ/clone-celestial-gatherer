@@ -76,7 +76,7 @@ const Login: React.FC = () => {
         className="w-full max-w-md"
       >
         <div className="mb-8 flex justify-center">
-          <img src="/logo.svg" alt="Paulo Cell Logo" className="h-16" />
+          <img src="/logo.svg" alt="Paulo Cell Sistema PDV Logo" className="h-16" />
         </div>
 
         <Card>
@@ -157,7 +157,17 @@ const Login: React.FC = () => {
 
 
           </CardContent>
-          {/* CardFooter removed as requested */}
+          <CardFooter className="flex justify-center">
+            <p className="text-sm text-muted-foreground">
+              Não tem uma conta?{' '}
+              <Link
+                to="/register"
+                className="font-medium text-primary hover:underline"
+              >
+                Cadastre-se
+              </Link>
+            </p>
+          </CardFooter>
         </Card>
       </motion.div>
     </div>
