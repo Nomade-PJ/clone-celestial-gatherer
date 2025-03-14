@@ -190,7 +190,7 @@ const NewDocument: React.FC = () => {
         )}
 
         {showAddressAlert && documentType === 'nfe' && (
-          <Alert variant="warning" className="mb-6">
+          <Alert variant="destructive" className="mb-6">
             <AlertCircleIcon className="h-4 w-4" />
             <AlertTitle>Informações de endereço incompletas</AlertTitle>
             <AlertDescription>

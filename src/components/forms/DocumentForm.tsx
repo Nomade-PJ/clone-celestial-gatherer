@@ -54,6 +54,12 @@ interface DocumentFormProps {
   customer?: any;
 }
 
+// Interface para os campos de endereço requeridos
+interface AddressField {
+  field: string;
+  label: string;
+}
+
 const DocumentForm: React.FC<DocumentFormProps> = ({ 
   type, 
   onSubmit, 
@@ -107,15 +113,15 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
       if (!customer.address) {
         messages.push('Endereço completo é obrigatório para emissão de NF-e');
       } else {
-        const requiredAddressFields = [
+        const requiredAddressFields: AddressField[] = [
           { field: 'street', label: 'Rua/Logradouro' },
           { field: 'number', label: 'Número' },
           { field: 'neighborhood', label: 'Bairro' }
         ];
         
         const missingFields = requiredAddressFields
-          .filter(field => !customer.address[field] || customer.address[field].trim() === '')
-          .map(field => field.label);
+          .filter(item => !customer.address[item.field] || customer.address[item.field].trim() === '')
+          .map(item => item.label);
           
         // Verificar campos diretamente no objeto do cliente
         if (!customer.city || customer.city.trim() === '') {
@@ -287,7 +293,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
           <CardContent className="pt-6">
             <div className="grid gap-6">
               {showValidationWarning && (
-                <Alert variant="warning" className="mb-2">
+                <Alert variant="destructive" className="mb-2">
                   <AlertCircleIcon className="h-4 w-4" />
                   <AlertDescription>
                     <ul className="list-disc pl-5">

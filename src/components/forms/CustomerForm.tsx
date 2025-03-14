@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { v4 as uuidv4 } from 'uuid';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, InfoIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CustomerFormProps {
   onSubmit?: (customerData: any) => void;
@@ -161,15 +162,35 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     notes: initialData.notes || '',
     isCompany: initialData.isCompany || false,
     createdAt: initialData.createdAt || new Date().toISOString(),
+    // Adicionando campos específicos de endereço
+    addressDetail: {
+      number: initialData.addressDetail?.number || initialData.address?.number || '',
+      neighborhood: initialData.addressDetail?.neighborhood || initialData.address?.neighborhood || '',
+      complement: initialData.addressDetail?.complement || initialData.address?.complement || '',
+    }
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [cpfCnpjError, setCpfCnpjError] = useState<string | null>(null);
   const [cpfCnpjValid, setCpfCnpjValid] = useState<boolean>(false);
+  const [showNfeInfo, setShowNfeInfo] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    
+    // Handle address detail fields
+    if (name.startsWith('addressDetail.')) {
+      const field = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        addressDetail: {
+          ...prev.addressDetail,
+          [field]: value
+        }
+      }));
+      return;
+    }
     
     // Handle CPF/CNPJ formatting and validation
     if (name === 'cpfCnpj') {
@@ -222,6 +243,10 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           address: data.logradouro || prev.address,
           city: data.localidade || prev.city,
           state: data.uf || prev.state,
+          addressDetail: {
+            ...prev.addressDetail,
+            neighborhood: data.bairro || prev.addressDetail.neighborhood
+          }
         }));
         toast.success('Endereço preenchido automaticamente');
       } else {
@@ -251,6 +276,19 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Prepare the customer data by combining address details with the main form
+      const customerToSave = {
+        ...formData,
+        // Create address object with proper fields for NF-e
+        address: {
+          ...formData.addressDetail,
+          street: formData.address,
+          city: formData.city,
+          state: formData.state,
+          postalCode: formData.postalCode
+        }
+      };
+      
       // Retrieve existing customers from localStorage
       const savedCustomers = localStorage.getItem('pauloCell_customers');
       let customers = savedCustomers ? JSON.parse(savedCustomers) : [];
@@ -258,18 +296,18 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
       if (isEdit) {
         // Update existing customer
         customers = customers.map((customer: any) => 
-          customer.id === formData.id ? formData : customer
+          customer.id === formData.id ? customerToSave : customer
         );
       } else {
         // Add new customer
-        customers.push(formData);
+        customers.push(customerToSave);
       }
       
       // Save updated customers list to localStorage
       localStorage.setItem('pauloCell_customers', JSON.stringify(customers));
       
       if (onSubmit) {
-        onSubmit(formData);
+        onSubmit(customerToSave);
       }
       
       toast.success(
@@ -382,12 +420,34 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
         </div>
         
         <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Endereço</h3>
-            <p className="text-sm text-muted-foreground">
-              Informações de endereço do cliente.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Endereço</h3>
+              <p className="text-sm text-muted-foreground">
+                Informações de endereço do cliente.
+              </p>
+            </div>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => setShowNfeInfo(!showNfeInfo)}
+            >
+              <InfoIcon size={16} />
+              <span>Campos obrigatórios para NF-e</span>
+            </Button>
           </div>
+          
+          {showNfeInfo && (
+            <Alert className="mb-4">
+              <InfoIcon className="h-4 w-4" />
+              <AlertDescription>
+                Para emissão de NF-e, todos os campos de endereço são obrigatórios:
+                Rua/Logradouro, Número, Bairro, Cidade, Estado e CEP.
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -430,14 +490,49 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="address">Endereço</Label>
+            <Label htmlFor="address">Rua/Logradouro</Label>
             <Input
               id="address"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="Rua, número, complemento"
+              placeholder="Nome da rua/avenida"
             />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="addressDetail.number">Número</Label>
+              <Input
+                id="addressDetail.number"
+                name="addressDetail.number"
+                value={formData.addressDetail.number}
+                onChange={handleChange}
+                placeholder="123"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="addressDetail.neighborhood">Bairro</Label>
+              <Input
+                id="addressDetail.neighborhood"
+                name="addressDetail.neighborhood"
+                value={formData.addressDetail.neighborhood}
+                onChange={handleChange}
+                placeholder="Nome do bairro"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="addressDetail.complement">Complemento</Label>
+              <Input
+                id="addressDetail.complement"
+                name="addressDetail.complement"
+                value={formData.addressDetail.complement}
+                onChange={handleChange}
+                placeholder="Apto, Bloco, etc"
+              />
+            </div>
           </div>
         </div>
         
