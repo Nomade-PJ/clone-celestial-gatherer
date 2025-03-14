@@ -1,17 +1,52 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { SmartphoneIcon, WrenchIcon, UsersIcon, CodeIcon } from 'lucide-react';
+import { SmartphoneIcon, WrenchIcon, UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import DeveloperContactModal from '@/components/layout/header/DeveloperContactModal';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load the modal para melhorar o tempo de carregamento inicial
+const DeveloperContactModal = lazy(() => import('@/components/layout/header/DeveloperContactModal'));
 
 const Index = () => {
   const navigate = useNavigate();
   const [developerModalOpen, setDeveloperModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simular um pequeno delay para garantir que o carregamento dos recursos básicos seja concluído
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleDeveloperContact = () => {
     setDeveloperModalOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100 p-4">
+        <div className="text-center max-w-3xl">
+          <Skeleton className="h-16 w-16 rounded-full mx-auto mb-6" />
+          <Skeleton className="h-10 w-48 mx-auto mb-4" />
+          <Skeleton className="h-6 w-80 mx-auto mb-6" />
+          <Skeleton className="h-4 w-96 mx-auto mb-8" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
+          
+          <Skeleton className="h-12 w-48 mx-auto" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100">
@@ -35,7 +70,7 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <motion.div 
             className="bg-card rounded-xl border border-border p-4 text-center"
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
             <div className="flex justify-center mb-3">
@@ -49,7 +84,7 @@ const Index = () => {
 
           <motion.div 
             className="bg-card rounded-xl border border-border p-4 text-center"
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
             <div className="flex justify-center mb-3">
@@ -63,7 +98,7 @@ const Index = () => {
 
           <motion.div 
             className="bg-card rounded-xl border border-border p-4 text-center"
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
             <div className="flex justify-center mb-3">
@@ -80,7 +115,7 @@ const Index = () => {
           <Button 
             size="lg" 
             onClick={() => navigate('/login')}
-            className="px-12 py-6 text-lg font-medium shadow-lg hover:shadow-xl transition-all"
+            className="px-10 py-6 text-lg font-medium shadow-md hover:shadow-lg transition-all"
           >
             Entrar no Sistema
           </Button>
@@ -99,10 +134,14 @@ const Index = () => {
         </Button>
       </div>
 
-      <DeveloperContactModal 
-        open={developerModalOpen} 
-        onOpenChange={setDeveloperModalOpen} 
-      />
+      <Suspense fallback={null}>
+        {developerModalOpen && (
+          <DeveloperContactModal 
+            open={developerModalOpen} 
+            onOpenChange={setDeveloperModalOpen} 
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
@@ -25,6 +26,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { toast } from '@/components/ui/use-toast';
 
@@ -44,6 +46,16 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  useEffect(() => {
+    // Simula um pequeno delay para garantir que a página esteja pronta
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -65,7 +77,18 @@ const Login: React.FC = () => {
     }
   };
 
-
+  if (isPageLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md space-y-4">
+          <div className="flex justify-center">
+            <Skeleton className="h-16 w-32" />
+          </div>
+          <Skeleton className="h-[400px] w-full rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -154,8 +177,6 @@ const Login: React.FC = () => {
                 </Button>
               </form>
             </Form>
-
-
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">

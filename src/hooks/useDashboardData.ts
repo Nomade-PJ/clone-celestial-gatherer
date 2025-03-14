@@ -11,6 +11,7 @@ export const useDashboardData = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Load data from localStorage
   const loadData = useCallback(() => {
@@ -48,22 +49,27 @@ export const useDashboardData = () => {
       }
       
       setLastUpdated(new Date());
-      console.log('Dashboard loaded');
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Erro ao carregar dados');
+      if (isInitialLoad) {
+        // Só mostra erro no primeiro carregamento
+        toast.error('Erro ao carregar dados');
+      }
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [isInitialLoad]);
   
   // Initial load and set up polling
   useEffect(() => {
     // Initial load
     loadData();
     
-    // Set up interval to check for data changes (real-time updates)
-    const interval = setInterval(loadData, 5000);
+    // Set up interval to check for data changes, mas menos frequente (a cada 30 segundos em vez de 5)
+    const interval = setInterval(loadData, 30000);
     
     // Clean up interval on component unmount
     return () => clearInterval(interval);
@@ -111,6 +117,7 @@ export const useDashboardData = () => {
     lastUpdated,
     handleRefresh,
     totalRevenue,
-    formatLastUpdated
+    formatLastUpdated,
+    isInitialLoad
   };
 };
