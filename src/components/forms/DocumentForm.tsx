@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -18,7 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { TrashIcon } from 'lucide-react';
+import { TrashIcon, AlertCircleIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const documentFormSchema = z.object({
   type: z.enum(['nfe', 'nfce', 'nfse']),
@@ -48,11 +50,97 @@ interface DocumentFormProps {
   onSubmit: (data: DocumentFormData) => void;
   onCancel: () => void;
   customerId?: string;
+  requiresApiConfig?: boolean;
+  customer?: any;
 }
 
-const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, customerId }) => {
+const DocumentForm: React.FC<DocumentFormProps> = ({ 
+  type, 
+  onSubmit, 
+  onCancel, 
+  customerId,
+  requiresApiConfig = false,
+  customer: customerProp
+}) => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showValidationWarning, setShowValidationWarning] = useState(false);
+  const [validationMessages, setValidationMessages] = useState<string[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+
+  // Carregar clientes do localStorage
+  useEffect(() => {
+    const savedCustomers = localStorage.getItem('pauloCell_customers');
+    if (savedCustomers) {
+      const parsedCustomers = JSON.parse(savedCustomers);
+      setCustomers(parsedCustomers);
+      
+      // Se temos um customerId, encontre o cliente e verifique seus dados
+      if (customerId) {
+        const customer = parsedCustomers.find((c: any) => c.id === customerId);
+        if (customer) {
+          setSelectedCustomer(customer);
+          validateCustomerForDocumentType(customer, type);
+        }
+      }
+      
+      // Se temos o cliente via props, use-o
+      if (customerProp) {
+        setSelectedCustomer(customerProp);
+        validateCustomerForDocumentType(customerProp, type);
+      }
+    }
+  }, [customerId, type, customerProp]);
+
+  // Validar cliente para o tipo de documento
+  const validateCustomerForDocumentType = (customer: any, documentType: 'nfe' | 'nfce' | 'nfse') => {
+    const messages = [];
+    
+    // Verificar CPF/CNPJ
+    if (!customer.document && !customer.cpfCnpj) {
+      messages.push('CPF/CNPJ do cliente é obrigatório para emissão de documento fiscal');
+    }
+    
+    // Validações específicas para NF-e
+    if (documentType === 'nfe') {
+      // Verificar campos de endereço para NF-e
+      if (!customer.address) {
+        messages.push('Endereço completo é obrigatório para emissão de NF-e');
+      } else {
+        const requiredAddressFields = [
+          { field: 'street', label: 'Rua/Logradouro' },
+          { field: 'number', label: 'Número' },
+          { field: 'neighborhood', label: 'Bairro' }
+        ];
+        
+        const missingFields = requiredAddressFields
+          .filter(field => !customer.address[field] || customer.address[field].trim() === '')
+          .map(field => field.label);
+          
+        // Verificar campos diretamente no objeto do cliente
+        if (!customer.city || customer.city.trim() === '') {
+          missingFields.push('Cidade');
+        }
+        if (!customer.state || customer.state.trim() === '') {
+          missingFields.push('Estado');
+        }
+        if (!customer.postalCode || customer.postalCode.trim() === '') {
+          missingFields.push('CEP');
+        }
+        
+        if (missingFields.length > 0) {
+          messages.push(`Os seguintes campos de endereço são obrigatórios para NF-e: ${missingFields.join(', ')}`);
+        }
+      }
+    }
+    
+    if (messages.length > 0) {
+      setValidationMessages(messages);
+      setShowValidationWarning(true);
+    } else {
+      setShowValidationWarning(false);
+    }
+  };
 
   const form = useForm<DocumentFormData>({
     resolver: zodResolver(documentFormSchema),
@@ -69,13 +157,17 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
     },
   });
 
-  useEffect(() => {
-    // Carregar clientes do localStorage
-    const savedCustomers = localStorage.getItem('pauloCell_customers');
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
+  // Atualizar o cliente selecionado quando o usuário mudar o select
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    setSelectedCustomer(customer);
+    
+    if (customer) {
+      validateCustomerForDocumentType(customer, type);
+    } else {
+      setShowValidationWarning(false);
     }
-  }, []);
+  };
 
   const handleSubmit = async (data: DocumentFormData) => {
     setIsLoading(true);
@@ -89,36 +181,16 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
         throw new Error('Cliente não encontrado');
       }
       
-      // Validate customer data for invoice
-      if (!customerObj.document && !customerObj.cpfCnpj) {
-        throw new Error('CPF/CNPJ do cliente é obrigatório para emissão de documento fiscal');
+      // Verificar novamente as validações
+      validateCustomerForDocumentType(customerObj, type);
+      
+      if (validationMessages.length > 0) {
+        throw new Error(validationMessages[0]);
       }
       
-      // Validate address if it's a NF-e
-      if (data.type === 'nfe') {
-        if (!customerObj.address) {
-          throw new Error('Endereço do cliente é obrigatório para emissão de NF-e');
-        }
-        
-        // Check for all required address fields
-        const requiredFields = ['street', 'number', 'neighborhood', 'city', 'state', 'postalCode'];
-        const missingFields = requiredFields.filter(
-          field => !customerObj.address[field] || customerObj.address[field].trim() === ''
-        );
-        
-        if (missingFields.length > 0) {
-          const fieldNames = {
-            street: 'Rua/Logradouro',
-            number: 'Número',
-            neighborhood: 'Bairro',
-            city: 'Cidade',
-            state: 'Estado',
-            postalCode: 'CEP'
-          };
-          
-          const missingFieldNames = missingFields.map(field => fieldNames[field] || field);
-          throw new Error(`Os seguintes campos de endereço são obrigatórios para NF-e: ${missingFieldNames.join(', ')}`);
-        }
+      // Se o tipo de documento requer API configurada, verifique
+      if ((type === 'nfce' || type === 'nfse') && requiresApiConfig) {
+        throw new Error('Chave da API não configurada. Por favor, configure a API nas configurações.');
       }
       
       // Validate items
@@ -214,13 +286,41 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
         <Card>
           <CardContent className="pt-6">
             <div className="grid gap-6">
+              {showValidationWarning && (
+                <Alert variant="warning" className="mb-2">
+                  <AlertCircleIcon className="h-4 w-4" />
+                  <AlertDescription>
+                    <ul className="list-disc pl-5">
+                      {validationMessages.map((message, index) => (
+                        <li key={index}>{message}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {requiresApiConfig && (type === 'nfce' || type === 'nfse') && (
+                <Alert variant="destructive" className="mb-2">
+                  <AlertCircleIcon className="h-4 w-4" />
+                  <AlertDescription>
+                    A API de notas fiscais não está configurada. Configure a API nas configurações antes de emitir este tipo de documento.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <FormField
                 control={form.control}
                 name="customer"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cliente</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        handleCustomerChange(value);
+                      }} 
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um cliente" />
@@ -473,7 +573,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ type, onSubmit, onCancel, c
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || requiresApiConfig || showValidationWarning}>
             {isLoading ? 'Emitindo...' : 'Emitir Documento'}
           </Button>
         </div>

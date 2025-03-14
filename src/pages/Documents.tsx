@@ -27,7 +27,9 @@ import {
   FileIcon,
   FileCheckIcon,
   FilePlusIcon,
-  TrashIcon
+  TrashIcon,
+  SettingsIcon,
+  AlertCircleIcon
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -56,6 +58,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { exportToPDF, exportToExcel, exportToCSV } from '@/lib/export-utils';
 
 interface Document {
@@ -82,10 +85,28 @@ const Documents: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
+  const [isApiConfigured, setIsApiConfigured] = useState(true);
 
   useEffect(() => {
     loadDocuments();
+    checkApiConfiguration();
   }, []);
+
+  const checkApiConfiguration = () => {
+    const apiConfig = localStorage.getItem('pauloCell_invoiceApiConfig');
+    if (!apiConfig) {
+      setIsApiConfigured(false);
+      return;
+    }
+    
+    const config = JSON.parse(apiConfig);
+    if (!config.apiKey || config.apiKey.trim() === '') {
+      setIsApiConfigured(false);
+      return;
+    }
+    
+    setIsApiConfigured(true);
+  };
 
   const loadDocuments = () => {
     const savedDocuments = localStorage.getItem('pauloCell_documents');
@@ -480,8 +501,35 @@ const Documents: React.FC = () => {
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/settings', { state: { openTab: 'fiscalApi' } })}
+              className="gap-2"
+            >
+              <SettingsIcon size={16} />
+              <span>Config. API</span>
+            </Button>
           </div>
         </div>
+
+        {!isApiConfigured && (
+          <Alert variant="warning" className="mb-6">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Configuração de API necessária</AlertTitle>
+            <AlertDescription>
+              A API de notas fiscais não está configurada. Alguns tipos de documentos podem não funcionar corretamente.
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate('/settings', { state: { openTab: 'fiscalApi' } })}
+                >
+                  Configurar API
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="mb-6">
           <CardHeader>

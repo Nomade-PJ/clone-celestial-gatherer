@@ -648,19 +648,15 @@ const formatDataForNfseApi = (data: InvoiceData): any => {
  */
 export const convertDocumentToApiFormat = (document: any, customer: any): InvoiceData => {
   // Create a properly formatted address object if address exists
-  let addressObj = undefined;
-  
-  if (customer.address) {
-    addressObj = {
-      street: customer.address.street || customer.address || '',
-      number: customer.address.number || '',
-      complement: customer.address.complement || '',
-      neighborhood: customer.address.neighborhood || '',
-      city: customer.city || '',
-      state: customer.state || '',
-      zipCode: customer.postalCode || ''
-    };
-  }
+  const addressObj = {
+    street: customer.address?.street || customer.address || '',
+    number: customer.address?.number || '',
+    complement: customer.address?.complement || '',
+    neighborhood: customer.address?.neighborhood || '',
+    city: customer.city || customer.address?.city || '',
+    state: customer.state || customer.address?.state || '',
+    zipCode: customer.postalCode || customer.address?.zipCode || ''
+  };
   
   return {
     type: document.type,

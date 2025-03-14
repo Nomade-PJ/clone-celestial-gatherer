@@ -1,13 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { motion } from 'framer-motion';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useLocation } from 'react-router-dom';
 import { 
   UserIcon, 
   StoreIcon, 
@@ -15,7 +17,9 @@ import {
   SaveIcon,
   DatabaseIcon,
   TrashIcon,
-  RefreshCwIcon
+  RefreshCwIcon,
+  FileTextIcon,
+  KeyIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -28,9 +32,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { initInvoiceApi, InvoiceApiConfig } from '@/lib/invoice-api';
 
 const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('company');
+  const location = useLocation();
+  const stateTab = location.state?.openTab || null;
+  const [activeTab, setActiveTab] = useState(stateTab || 'company');
   const [isResettingDatabase, setIsResettingDatabase] = useState(false);
   
   // Company information state
@@ -57,10 +64,18 @@ const Settings: React.FC = () => {
     smsNotifications: false,
   });
   
+  // API settings state
+  const [apiSettings, setApiSettings] = useState<InvoiceApiConfig>({
+    apiKey: '',
+    environment: 'sandbox',
+    companyId: ''
+  });
+  
   // Load saved settings on component mount
   useEffect(() => {
     const savedCompanyData = localStorage.getItem('pauloCell_companyData');
     const savedNotificationSettings = localStorage.getItem('pauloCell_notificationSettings');
+    const savedApiSettings = localStorage.getItem('pauloCell_invoiceApiConfig');
 
     if (savedCompanyData) {
       setCompanyData(JSON.parse(savedCompanyData));
@@ -69,11 +84,29 @@ const Settings: React.FC = () => {
     if (savedNotificationSettings) {
       setNotificationSettings(JSON.parse(savedNotificationSettings));
     }
-  }, []);
+    
+    if (savedApiSettings) {
+      setApiSettings(JSON.parse(savedApiSettings));
+    }
+    
+    // Definir a aba ativa com base no parâmetro de estado da navegação
+    if (stateTab) {
+      setActiveTab(stateTab);
+    }
+  }, [stateTab]);
 
   const handleCompanyDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCompanyData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleApiSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setApiSettings(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleApiEnvironmentChange = (environment: 'sandbox' | 'production') => {
+    setApiSettings(prev => ({ ...prev, environment }));
   };
   
   const handleSwitchChange = (setting: string, checked: boolean) => {
@@ -88,6 +121,22 @@ const Settings: React.FC = () => {
   const handleSaveNotificationSettings = () => {
     localStorage.setItem('pauloCell_notificationSettings', JSON.stringify(notificationSettings));
     toast.success('Configurações de notificações salvas com sucesso!');
+  };
+  
+  const handleSaveApiSettings = () => {
+    // Validar API Key
+    if (!apiSettings.apiKey || apiSettings.apiKey.trim() === '') {
+      toast.error('A chave da API é obrigatória.');
+      return;
+    }
+    
+    // Inicializar a API com as configurações
+    initInvoiceApi(apiSettings);
+    
+    // Salvar configurações no localStorage
+    localStorage.setItem('pauloCell_invoiceApiConfig', JSON.stringify(apiSettings));
+    
+    toast.success('Configurações da API salvas com sucesso!');
   };
   
   const handleResetDatabase = () => {
@@ -158,10 +207,14 @@ const Settings: React.FC = () => {
         </div>
         
         <Tabs defaultValue="company" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 sm:w-[400px]">
+          <TabsList className="grid grid-cols-3 sm:w-[600px]">
             <TabsTrigger value="company" className="flex items-center gap-2">
               <StoreIcon size={16} />
               <span>Empresa</span>
+            </TabsTrigger>
+            <TabsTrigger value="fiscalApi" className="flex items-center gap-2">
+              <FileTextIcon size={16} />
+              <span>API Fiscal</span>
             </TabsTrigger>
             <TabsTrigger value="system" className="flex items-center gap-2">
               <DatabaseIcon size={16} />
@@ -273,6 +326,97 @@ const Settings: React.FC = () => {
                 <Button onClick={handleSaveCompanyData} className="gap-2">
                   <SaveIcon size={16} />
                   <span>Salvar Informações</span>
+                </Button>
+              </div>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="fiscalApi" className="mt-6">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Configuração da API de Notas Fiscais</h2>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey" className="flex items-center gap-2">
+                    <KeyIcon size={16} />
+                    <span>Chave da API</span>
+                  </Label>
+                  <Input
+                    id="apiKey"
+                    name="apiKey"
+                    value={apiSettings.apiKey}
+                    onChange={handleApiSettingsChange}
+                    placeholder="Digite a chave da API de notas fiscais"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Esta chave é necessária para emissão de documentos fiscais. Você pode obter sua chave no portal do provedor de serviços de NF-e.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="companyId">ID da Empresa</Label>
+                  <Input
+                    id="companyId"
+                    name="companyId"
+                    value={apiSettings.companyId}
+                    onChange={handleApiSettingsChange}
+                    placeholder="Digite o ID da sua empresa (se necessário)"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Algumas APIs requerem um identificador da empresa. Se o seu provedor não utiliza este campo, deixe em branco.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Ambiente</Label>
+                  <div className="flex space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="environment-sandbox"
+                        checked={apiSettings.environment === 'sandbox'}
+                        onChange={() => handleApiEnvironmentChange('sandbox')}
+                        className="form-radio h-4 w-4"
+                      />
+                      <Label htmlFor="environment-sandbox" className="cursor-pointer">Sandbox (Testes)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="environment-production"
+                        checked={apiSettings.environment === 'production'}
+                        onChange={() => handleApiEnvironmentChange('production')}
+                        className="form-radio h-4 w-4"
+                      />
+                      <Label htmlFor="environment-production" className="cursor-pointer">Produção</Label>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Use o ambiente de Sandbox para testes sem emitir documentos fiscais reais.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setApiSettings({
+                      apiKey: 'teste_sandbox_123',
+                      environment: 'sandbox',
+                      companyId: 'teste_company_id'
+                    });
+                    toast.info('Configurações de teste carregadas. Lembre-se que estas são apenas para teste e não emitem documentos reais.');
+                  }}
+                  className="gap-2"
+                >
+                  <RefreshCwIcon size={16} />
+                  <span>Carregar Configuração de Teste</span>
+                </Button>
+                
+                <Button onClick={handleSaveApiSettings} className="gap-2">
+                  <SaveIcon size={16} />
+                  <span>Salvar Configurações</span>
                 </Button>
               </div>
             </Card>
