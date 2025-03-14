@@ -513,18 +513,18 @@ const Documents: React.FC = () => {
         </div>
 
         {!isApiConfigured && (
-          <Alert variant="warning" className="mb-6">
+          <Alert variant="destructive" className="mb-6">
             <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Configuração de API necessária</AlertTitle>
+            <AlertTitle>Configuração necessária</AlertTitle>
             <AlertDescription>
-              A API de notas fiscais não está configurada. Alguns tipos de documentos podem não funcionar corretamente.
+              A API de notas fiscais não está configurada. Configure a API nas configurações para emitir documentos fiscais.
               <div className="mt-2">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => navigate('/settings', { state: { openTab: 'fiscalApi' } })}
                 >
-                  Configurar API
+                  Ir para configurações
                 </Button>
               </div>
             </AlertDescription>

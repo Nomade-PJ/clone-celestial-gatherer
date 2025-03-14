@@ -45,8 +45,38 @@ const EditCustomer: React.FC = () => {
   }, [id, navigate]);
 
   const handleSubmit = (updatedCustomerData: any) => {
-    console.log('Updated customer data:', updatedCustomerData);
-    navigate(`/customers/${id}`);
+    try {
+      // Get all customers from localStorage
+      const savedCustomers = localStorage.getItem('pauloCell_customers');
+      if (!savedCustomers) {
+        throw new Error('Nenhum cliente encontrado');
+      }
+      
+      const customers = JSON.parse(savedCustomers);
+      
+      // Find the index of the customer to update
+      const customerIndex = customers.findIndex((c: any) => c.id === id);
+      if (customerIndex === -1) {
+        throw new Error('Cliente não encontrado');
+      }
+      
+      // Update the customer data
+      const updatedCustomers = [...customers];
+      updatedCustomers[customerIndex] = {
+        ...updatedCustomerData,
+        id, // Ensure we keep the same ID
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Save updated customers back to localStorage
+      localStorage.setItem('pauloCell_customers', JSON.stringify(updatedCustomers));
+      
+      toast.success('Cliente atualizado com sucesso');
+      navigate(`/customers/${id}`);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      toast.error('Erro ao atualizar cliente');
+    }
   };
 
   if (loading) {

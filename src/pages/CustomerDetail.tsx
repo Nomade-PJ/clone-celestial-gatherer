@@ -115,6 +115,37 @@ const CustomerDetail: React.FC = () => {
     }
   };
   
+  // Helper function to display address
+  const formatAddress = () => {
+    if (!customer) return 'Não informado';
+    
+    // Handle new address format (object with fields)
+    if (typeof customer.address === 'object' && customer.address !== null) {
+      const addr = customer.address;
+      const parts = [];
+      
+      if (addr.street) parts.push(addr.street);
+      if (addr.number) parts.push(addr.number);
+      if (addr.complement) parts.push(addr.complement);
+      
+      const mainPart = parts.filter(Boolean).join(', ');
+      
+      const locationParts = [];
+      if (addr.neighborhood) locationParts.push(addr.neighborhood);
+      if (addr.city) locationParts.push(addr.city);
+      if (addr.state) locationParts.push(addr.state);
+      if (addr.postalCode) locationParts.push(addr.postalCode);
+      
+      return [mainPart, locationParts.filter(Boolean).join(', ')].filter(Boolean).join('\n');
+    }
+    
+    // Handle legacy string address
+    return customer.address || 'Não informado';
+  };
+  
+  const formattedAddress = formatAddress();
+  const addressLines = formattedAddress.split('\n');
+  
   return (
     <MainLayout>
       <motion.div 
@@ -190,16 +221,11 @@ const CustomerDetail: React.FC = () => {
                   <MapPinIcon size={18} className="text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Endereço</p>
-                    <p className="text-sm">{customer.address || 'Não informado'}</p>
-                    {(customer.city || customer.state || customer.postalCode) && (
-                      <p className="text-sm">
-                        {[
-                          customer.city, 
-                          customer.state, 
-                          customer.postalCode
-                        ].filter(Boolean).join(', ')}
+                    {addressLines.map((line, idx) => (
+                      <p key={idx} className="text-sm">
+                        {line}
                       </p>
-                    )}
+                    ))}
                   </div>
                 </div>
                 
