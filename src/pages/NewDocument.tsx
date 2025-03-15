@@ -17,11 +17,21 @@ interface LocationState {
 const NewDocument: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Fix: Properly handle the case when location.state is null
-  // Fix: Properly handle the case when location.state is null
-  const locationState = location.state as LocationState;
-  const customerId = locationState?.customerId;
-  const documentType = locationState?.documentType || 'nfe';
+  // Properly handle the case when location.state is null
+  const locationState = location.state as LocationState | null;
+  
+  // Log the location state for debugging
+  console.log('Location state:', locationState);
+  
+  // Ensure customerId is properly extracted and defaulted
+  const customerId = locationState?.customerId || undefined;
+  
+  // Ensure documentType is properly set, defaulting to 'nfe' if not provided
+  // Use explicit type checking to ensure we get a valid document type
+  let documentType: 'nfe' | 'nfce' | 'nfse' = 'nfe';
+  if (locationState?.documentType && ['nfe', 'nfce', 'nfse'].includes(locationState.documentType)) {
+    documentType = locationState.documentType as 'nfe' | 'nfce' | 'nfse';
+  }
   const [apiConfigured, setApiConfigured] = useState(true);
   const [customer, setCustomer] = useState<any>(null);
   const [showAddressAlert, setShowAddressAlert] = useState(false);

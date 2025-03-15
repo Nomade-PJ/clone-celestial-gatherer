@@ -127,7 +127,22 @@ const CustomerDetail: React.FC = () => {
   
   // Handle new document click
   const handleNewDocument = (type: 'nfe' | 'nfce' | 'nfse' = 'nfe') => {
-    navigate('/documents/new', { state: { customerId: customer?.id, documentType: type } });
+    // Ensure we're explicitly passing the document type
+    console.log('Navigating to new document with type:', type);
+    console.log('Customer ID:', customer?.id);
+    
+    // Make sure we're passing valid values
+    if (!customer?.id) {
+      toast.error('Cliente não encontrado');
+      return;
+    }
+    
+    navigate('/documents/new', { 
+      state: { 
+        customerId: customer.id, 
+        documentType: type 
+      } 
+    });
   };
   
   if (loading) {
