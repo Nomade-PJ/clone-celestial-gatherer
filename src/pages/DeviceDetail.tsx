@@ -10,16 +10,21 @@ import {
   TrashIcon, 
   CheckCircleIcon, 
   AlertCircleIcon, 
-  XCircleIcon 
+  XCircleIcon,
+  CalendarIcon,
+  UserIcon,
+  DollarSignIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const DeviceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [device, setDevice] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
+  const [serviceHistory, setServiceHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -43,6 +48,14 @@ const DeviceDetail: React.FC = () => {
               if (foundCustomer) {
                 setCustomer(foundCustomer);
               }
+            }
+            
+            // Load service history for this device
+            const savedServices = localStorage.getItem('pauloCell_services');
+            if (savedServices) {
+              const services = JSON.parse(savedServices);
+              const deviceServices = services.filter((s: any) => s.deviceId === id);
+              setServiceHistory(deviceServices);
             }
           }
         }
@@ -220,30 +233,67 @@ const DeviceDetail: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Histórico de Serviços</h2>
             
-            {device.serviceHistory && device.serviceHistory.length > 0 ? (
+            {serviceHistory.length > 0 ? (
               <div className="space-y-4">
-                {device.serviceHistory.map((service: any, idx: number) => (
-                  <motion.div 
-                    key={service.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: idx * 0.1 }}
-                    className="border-b border-border pb-4 last:border-0 last:pb-0"
-                  >
-                    <div className="flex justify-between">
-                      <h3 className="font-medium">{service.type}</h3>
-                      <span className="text-sm font-medium text-primary">R$ {service.cost}</span>
-                    </div>
-                    <div className="flex justify-between mt-1 text-sm text-muted-foreground">
-                      <span>{service.date}</span>
-                      <span>{service.technician}</span>
-                    </div>
-                  </motion.div>
-                ))}
+                <div className="bg-muted/30 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase py-3 px-4">Data</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase py-3 px-4">Tipo de Serviço</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase py-3 px-4">Técnico</th>
+                        <th className="text-right text-xs font-medium text-muted-foreground uppercase py-3 px-4">Valor</th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase py-3 px-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {serviceHistory.map((service: any, idx: number) => (
+                        <motion.tr 
+                          key={service.id}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: idx * 0.05 }}
+                          className={idx < serviceHistory.length - 1 ? "border-b" : ""}
+                          onClick={() => navigate(`/services/${service.id}`)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <CalendarIcon size={14} className="text-muted-foreground" />
+                              {service.createDate || new Date(service.createdAt).toLocaleDateString('pt-BR')}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">{service.type}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <UserIcon size={14} className="text-muted-foreground" />
+                              {service.technician || 'Não atribuído'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <DollarSignIcon size={14} className="text-muted-foreground" />
+                              R$ {service.price?.toFixed(2) || service.totalCost?.toFixed(2) || '0.00'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {service.status === 'waiting' && <Badge className="bg-blue-500">Em espera</Badge>}
+                            {service.status === 'in_progress' && <Badge className="bg-amber-500">Em andamento</Badge>}
+                            {service.status === 'completed' && <Badge className="bg-green-500">Concluído</Badge>}
+                            {service.status === 'delivered' && <Badge className="bg-purple-500">Entregue</Badge>}
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground">Nenhum serviço registrado.</p>
             )}
+            <div className="mt-4">
+              <Button onClick={handleNewService}>Novo Serviço</Button>
+            </div>
           </Card>
         </div>
       </motion.div>

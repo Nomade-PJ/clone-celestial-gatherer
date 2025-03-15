@@ -17,7 +17,11 @@ interface LocationState {
 const NewDocument: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { customerId, documentType } = location.state as LocationState || { documentType: 'nfe' };
+  // Fix: Properly handle the case when location.state is null
+  // Fix: Properly handle the case when location.state is null
+  const locationState = location.state as LocationState;
+  const customerId = locationState?.customerId;
+  const documentType = locationState?.documentType || 'nfe';
   const [apiConfigured, setApiConfigured] = useState(true);
   const [customer, setCustomer] = useState<any>(null);
   const [showAddressAlert, setShowAddressAlert] = useState(false);
@@ -125,11 +129,21 @@ const NewDocument: React.FC = () => {
   };
 
   const handleSubmit = (data: any) => {
-    // Redirecionar para a página de documentos ou detalhes do cliente
-    if (customerId) {
-      navigate(`/customers/${customerId}`);
-    } else {
-      navigate('/documents');
+    // Save the document data to localStorage
+    try {
+      // The document data is already saved in the DocumentForm component's handleSubmit function
+      // We just need to show a success message and redirect
+      toast.success('Documento fiscal emitido com sucesso!');
+      
+      // Redirecionar para a página de documentos ou detalhes do cliente
+      if (customerId) {
+        navigate(`/customers/${customerId}`);
+      } else {
+        navigate('/documents');
+      }
+    } catch (error) {
+      console.error('Error saving document:', error);
+      toast.error('Erro ao salvar documento');
     }
   };
 

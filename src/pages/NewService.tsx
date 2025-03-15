@@ -36,6 +36,7 @@ const NewService: React.FC = () => {
     customerId: customerId || '',
     deviceId: deviceId || '',
     serviceType: '',
+    customServiceType: '',
     technicianId: '',
     estimatedCompletion: '',
     status: 'waiting',
@@ -76,7 +77,11 @@ const NewService: React.FC = () => {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
+    if (name === 'serviceType' && value === 'outros') {
+      setFormData({ ...formData, [name]: value, customServiceType: '' });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
   
   const addPart = (partId: string) => {
@@ -123,10 +128,20 @@ const NewService: React.FC = () => {
     const customer = customers.find(c => c.id === formData.customerId);
     const device = devices.find(d => d.id === formData.deviceId);
     
+    // Validar se o campo de serviço personalizado está preenchido quando 'Outros Serviços' for selecionado
+    if (formData.serviceType === 'outros' && !formData.customServiceType.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, digite o nome do serviço.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const serviceData = {
       id: uuidv4(),
       ...formData,
-      type: formData.serviceType,
+      type: formData.serviceType === 'outros' ? formData.customServiceType : formData.serviceType,
       parts: selectedParts,
       laborCost,
       totalCost: calculateTotal(),
@@ -234,8 +249,21 @@ const NewService: React.FC = () => {
                     <SelectItem value="Troca de Conector de Carga">Troca de Conector de Carga</SelectItem>
                     <SelectItem value="Atualização de Software">Atualização de Software</SelectItem>
                     <SelectItem value="Limpeza Interna">Limpeza Interna</SelectItem>
+                    <SelectItem value="outros">Outros Serviços</SelectItem>
                   </SelectContent>
                 </Select>
+                {formData.serviceType === 'outros' && (
+                  <div className="mt-2">
+                    <Input
+                      id="customServiceType"
+                      name="customServiceType"
+                      value={formData.customServiceType}
+                      onChange={handleInputChange}
+                      placeholder="Digite o nome do serviço"
+                      required
+                    />
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">

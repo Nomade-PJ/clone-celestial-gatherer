@@ -11,12 +11,43 @@ import {
   CalendarIcon,
   ClockIcon,
   ArrowLeftIcon,
-  SmartphoneIcon
+  SmartphoneIcon,
+  FileTextIcon,
+  PlusIcon,
+  FileIcon
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import ServiceCard from '@/components/ui/ServiceCard';
 import { toast } from 'sonner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface Document {
+  id: string;
+  type: 'nfe' | 'nfce' | 'nfse';
+  number: string;
+  customer: string;
+  customerId: string;
+  date: string;
+  value: number;
+  status: 'Emitida' | 'Cancelada' | 'Pendente';
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitValue: number;
+  }>;
+  paymentMethod: string;
+  observations?: string;
+  invoiceId?: string;
+  invoiceUrl?: string;
+}
 
 const CustomerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +56,7 @@ const CustomerDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [customerDevices, setCustomerDevices] = useState<any[]>([]);
   const [serviceHistory, setServiceHistory] = useState<any[]>([]);
+  const [customerDocuments, setCustomerDocuments] = useState<Document[]>([]);
   
   useEffect(() => {
     // Load customer data from localStorage
@@ -57,6 +89,16 @@ const CustomerDetail: React.FC = () => {
             } else {
               setServiceHistory([]);
             }
+            
+            // Load customer documents
+            const savedDocuments = localStorage.getItem('pauloCell_documents');
+            if (savedDocuments) {
+              const documents = JSON.parse(savedDocuments);
+              const customerDocs = documents.filter((doc: Document) => doc.customerId === id);
+              setCustomerDocuments(customerDocs);
+            } else {
+              setCustomerDocuments([]);
+            }
           } else {
             toast.error('Cliente não encontrado');
             navigate('/customers');
@@ -81,6 +123,11 @@ const CustomerDetail: React.FC = () => {
   // Handle add device click
   const handleAddDevice = () => {
     navigate('/devices/new', { state: { customerId: customer?.id } });
+  };
+  
+  // Handle new document click
+  const handleNewDocument = (type: 'nfe' | 'nfce' | 'nfse' = 'nfe') => {
+    navigate('/documents/new', { state: { customerId: customer?.id, documentType: type } });
   };
   
   if (loading) {
@@ -113,6 +160,14 @@ const CustomerDetail: React.FC = () => {
     } catch (e) {
       return dateString;
     }
+  };
+  
+  // Format currency for display
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
   
   // Helper function to display address
@@ -337,6 +392,88 @@ const CustomerDetail: React.FC = () => {
                   <div className="text-center py-8 bg-muted/30 rounded-lg">
                     <p className="text-muted-foreground mb-3">Nenhum serviço registrado</p>
                     <Button onClick={handleNewService}>Agendar Novo Serviço</Button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="bg-card rounded-xl border border-border p-6 shadow-sm"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Documentos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Total de {customerDocuments.length} documentos emitidos
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => handleNewDocument()}>
+                    <FileTextIcon size={16} />
+                    <span>Emitir Nota Fiscal</span>
+                  </Button>
+                </div>
+              </div>
+              
+              <div>
+                {customerDocuments.length > 0 ? (
+                  <div className="border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Número</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Valor</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customerDocuments.map((doc) => (
+                          <TableRow 
+                            key={doc.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => navigate(`/documents/${doc.id}`)}
+                          >
+                            <TableCell>{doc.number}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <FileIcon size={14} />
+                                <span>{doc.type.toUpperCase()}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{formatDate(doc.date)}</TableCell>
+                            <TableCell>{formatCurrency(doc.value)}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${doc.status === 'Emitida' ? 'bg-green-100 text-green-800' : doc.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {doc.status}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground mb-3">Nenhum documento registrado</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button onClick={() => handleNewDocument('nfe')} variant="outline" size="sm" className="gap-1">
+                        <FileTextIcon size={16} />
+                        <span>Emitir NF-e</span>
+                      </Button>
+                      <Button onClick={() => handleNewDocument('nfce')} variant="outline" size="sm" className="gap-1">
+                        <FileTextIcon size={16} />
+                        <span>Emitir NFC-e</span>
+                      </Button>
+                      <Button onClick={() => handleNewDocument('nfse')} variant="outline" size="sm" className="gap-1">
+                        <FileTextIcon size={16} />
+                        <span>Emitir NFS-e</span>
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
